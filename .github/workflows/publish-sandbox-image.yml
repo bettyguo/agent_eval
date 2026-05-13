@@ -44,7 +44,7 @@ jobs:
         run: echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Build + push image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: sandbox
           file: sandbox/Dockerfile.base
