@@ -18,6 +18,7 @@ def test_empty_bundle_has_stable_hash():
     assert a.source == "empty"
     # Hash is the SHA256 of the sentinel
     import hashlib
+
     assert a.hash == hashlib.sha256(EMPTY_BUNDLE_SENTINEL.encode("utf-8")).hexdigest()
 
 

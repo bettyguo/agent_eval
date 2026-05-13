@@ -15,7 +15,10 @@ def _valid_task_kwargs(**overrides):
         "description": "A test task.",
         "license": "MIT",
         "prompt": "Do the thing.",
-        "grader": {"type": "python", "script": "def grade(workdir, trajectory, final_state):\n    return {'passed': True, 'details': {}}"},
+        "grader": {
+            "type": "python",
+            "script": "def grade(workdir, trajectory, final_state):\n    return {'passed': True, 'details': {}}",
+        },
     }
     base.update(overrides)
     return base
@@ -57,38 +60,50 @@ class TestTaskMeta:
 class TestGraderLLMBan:
     """ADR-0006: grader scripts may not import LLM SDKs."""
 
-    @pytest.mark.parametrize("forbidden", [
-        "import anthropic\n",
-        "import openai\n",
-        "from anthropic import Anthropic\n",
-        "from openai import OpenAI\n",
-        "import google.generativeai as genai\n",
-        "from google.genai import Client\n",
-    ])
+    @pytest.mark.parametrize(
+        "forbidden",
+        [
+            "import anthropic\n",
+            "import openai\n",
+            "from anthropic import Anthropic\n",
+            "from openai import OpenAI\n",
+            "import google.generativeai as genai\n",
+            "from google.genai import Client\n",
+        ],
+    )
     def test_forbidden_imports_rejected(self, forbidden):
         with pytest.raises(ValidationError):
-            Grader(type="python", script=forbidden + "def grade(*a, **k):\n    return {'passed': True}")
+            Grader(
+                type="python", script=forbidden + "def grade(*a, **k):\n    return {'passed': True}"
+            )
 
     def test_innocent_imports_ok(self):
-        Grader(type="python", script="import ast\nimport os\ndef grade(*a, **k):\n    return {'passed': True}")
+        Grader(
+            type="python",
+            script="import ast\nimport os\ndef grade(*a, **k):\n    return {'passed': True}",
+        )
 
 
 class TestTaskSetMeta:
     def test_minimal_valid(self):
-        m = TaskSetMeta.model_validate({
-            "name": "skill-specific-v1",
-            "version": "1",
-            "panel": "primary",
-            "description": "A task set.",
-        })
+        m = TaskSetMeta.model_validate(
+            {
+                "name": "skill-specific-v1",
+                "version": "1",
+                "panel": "primary",
+                "description": "A task set.",
+            }
+        )
         assert m.panel == "primary"
         assert m.license == "Apache-2.0"  # default
 
     def test_panel_must_be_known(self):
         with pytest.raises(ValidationError):
-            TaskSetMeta.model_validate({
-                "name": "x",
-                "version": "1",
-                "panel": "tertiary",
-                "description": "y",
-            })
+            TaskSetMeta.model_validate(
+                {
+                    "name": "x",
+                    "version": "1",
+                    "panel": "tertiary",
+                    "description": "y",
+                }
+            )

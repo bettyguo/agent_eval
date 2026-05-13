@@ -11,15 +11,16 @@ from __future__ import annotations
 import signal
 import sys
 import traceback
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 from agenteval.errors import GraderError
 from agenteval.grading.types import FinalState, GraderResult, TrajectoryStep
 from agenteval.grading.utils import (
+    assert_unchanged,
     ast_function_count,
     ast_normalised_equal,
-    assert_unchanged,
     count_assertions,
     first_modify_time,
     grep_final_message,
@@ -68,7 +69,7 @@ def run_grader(
             task_id=task.id,
         )
 
-    with _timeout(GRADER_TIMEOUT_S, task.id):
+    with _Timeout(GRADER_TIMEOUT_S, task.id):
         try:
             raw = grade_fn(workdir, list(trajectory), final_state)
         except Exception as exc:
@@ -121,7 +122,7 @@ def _coerce(raw: Any, task_id: str) -> GraderResult:
     )
 
 
-class _timeout:
+class _Timeout:
     """Cross-platform-ish timeout. Uses SIGALRM on POSIX; no-op on Windows.
 
     On Windows, the harness's outer sandbox wall-time enforcement remains the
@@ -135,7 +136,7 @@ class _timeout:
         self._prev_handler: Any = None
         self._enabled = sys.platform != "win32" and hasattr(signal, "SIGALRM")
 
-    def __enter__(self) -> "_timeout":
+    def __enter__(self) -> _Timeout:
         if not self._enabled:
             return self
         self._prev_handler = signal.signal(signal.SIGALRM, self._on_timeout)

@@ -9,8 +9,8 @@ from __future__ import annotations
 import hashlib
 import io
 import tarfile
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 
 def hash_normalized_directory(root: str | Path) -> str:

@@ -12,7 +12,7 @@ from typing import Any
 
 from agenteval.errors import RunnerError
 from agenteval.grading.types import FinalState, TrajectoryStep
-from agenteval.runners.base import RunOutcome, Runner
+from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import (
     TOOL_DEFINITIONS,
     dispatch_tool,
@@ -53,7 +53,9 @@ class AnthropicRunner(Runner):
                 provider="anthropic",
             ) from exc
         try:
-            return anthropic.Anthropic(api_key=self.api_key) if self.api_key else anthropic.Anthropic()
+            return (
+                anthropic.Anthropic(api_key=self.api_key) if self.api_key else anthropic.Anthropic()
+            )
         except Exception as exc:
             raise RunnerError(
                 f"failed to construct Anthropic client: {exc}",
@@ -70,9 +72,7 @@ class AnthropicRunner(Runner):
     ) -> RunOutcome:
         client = self._client()
         system_prompt = _build_system_prompt(bundle)
-        messages: list[dict[str, Any]] = [
-            {"role": "user", "content": task.meta.prompt}
-        ]
+        messages: list[dict[str, Any]] = [{"role": "user", "content": task.meta.prompt}]
 
         trajectory: list[TrajectoryStep] = []
         total_in = 0

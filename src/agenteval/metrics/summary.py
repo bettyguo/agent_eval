@@ -83,9 +83,7 @@ def compute_summary(
         by_category_taskids[a.category].add(a.task_id)
 
     task_ids = sorted(by_task.keys())
-    per_task_pass_counts = [
-        sum(1 for x in by_task[tid] if x.passed) for tid in task_ids
-    ]
+    per_task_pass_counts = [sum(1 for x in by_task[tid] if x.passed) for tid in task_ids]
 
     # pass@1 / pass@5 / pass^5 (point + CI).
     p1 = pass_at_1(per_task_pass_counts, n_seeds=n_seeds)
@@ -153,9 +151,7 @@ def compute_summary(
     # Per-category pass@1.
     per_category: dict[str, float] = {}
     for category, tids in by_category_taskids.items():
-        per_task_counts_cat = [
-            sum(1 for x in by_task[tid] if x.passed) for tid in sorted(tids)
-        ]
+        per_task_counts_cat = [sum(1 for x in by_task[tid] if x.passed) for tid in sorted(tids)]
         per_category[category] = pass_at_1(per_task_counts_cat, n_seeds=n_seeds)
 
     return MetricSummary(

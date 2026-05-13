@@ -19,13 +19,11 @@ Tool dispatch:
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import re
 import shutil
 import tempfile
 import time
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
@@ -144,14 +142,12 @@ class DockerSandbox(Sandbox):
             raise SandboxError(f"docker exec_create failed: {exc}") from exc
 
         try:
-            output = self._client.api.exec_start(
-                exec_id, stream=False, demux=True
-            )
+            output = self._client.api.exec_start(exec_id, stream=False, demux=True)
         except Exception as exc:
             raise SandboxError(f"docker exec_start failed: {exc}") from exc
 
         # demux=True returns (stdout_bytes, stderr_bytes); when not demuxed it's bytes.
-        stdout_bytes, stderr_bytes = (output if isinstance(output, tuple) else (output, b""))
+        stdout_bytes, stderr_bytes = output if isinstance(output, tuple) else (output, b"")
         stdout = (stdout_bytes or b"").decode("utf-8", errors="replace")
         stderr = (stderr_bytes or b"").decode("utf-8", errors="replace")
 
@@ -180,9 +176,7 @@ class DockerSandbox(Sandbox):
         abs_path.write_text(content, encoding="utf-8")
         return {"path": path, "bytes_written": len(content.encode("utf-8"))}
 
-    def edit_file(
-        self, path: str, old_string: str, new_string: str
-    ) -> dict[str, Any]:
+    def edit_file(self, path: str, old_string: str, new_string: str) -> dict[str, Any]:
         abs_path = self._resolve_inside_workdir(path)
         if not abs_path.exists():
             raise SandboxError(f"cannot edit missing file: {path}", path=path)
@@ -206,11 +200,7 @@ class DockerSandbox(Sandbox):
             matches = list(root.rglob(pattern.replace("**/", "")))
         else:
             matches = list(root.glob(pattern))
-        return [
-            str(p.relative_to(root)).replace("\\", "/")
-            for p in matches
-            if p.is_file()
-        ]
+        return [str(p.relative_to(root)).replace("\\", "/") for p in matches if p.is_file()]
 
     def grep(self, pattern: str, path: str | None = None) -> list[dict[str, Any]]:
         root = self.workdir()
@@ -279,9 +269,7 @@ class DockerSandbox(Sandbox):
         try:
             import docker  # type: ignore[import-not-found]
         except ImportError as exc:
-            raise SandboxError(
-                "`docker` package not installed; run `pip install docker`"
-            ) from exc
+            raise SandboxError("`docker` package not installed; run `pip install docker`") from exc
         try:
             self._client = docker.from_env()
             # Ping the daemon — fail fast.
@@ -299,9 +287,7 @@ class DockerSandbox(Sandbox):
         try:
             candidate.relative_to(root.resolve())
         except ValueError as exc:
-            raise SandboxError(
-                f"path escapes sandbox workdir: {path}", path=path
-            ) from exc
+            raise SandboxError(f"path escapes sandbox workdir: {path}", path=path) from exc
         return candidate
 
     def _write_host_file(self, relpath: str, content: str) -> None:
@@ -319,9 +305,7 @@ class DockerSandbox(Sandbox):
         for skill in bundle.skills:
             skill_dir = skills_root / skill.name
             skill_dir.mkdir(parents=True, exist_ok=True)
-            (skill_dir / "SKILL.md").write_text(
-                _render_skill_md(skill), encoding="utf-8"
-            )
+            (skill_dir / "SKILL.md").write_text(_render_skill_md(skill), encoding="utf-8")
 
     def _inject_skills_in_home(self, bundle: SkillBundle) -> None:
         if not bundle.skills or self._container is None:
@@ -380,4 +364,6 @@ def shlex_safe(value: str) -> str:
 
 def _safe_pip_token(value: str) -> bool:
     """Allow standard pip package specifiers; reject shell metacharacters."""
-    return bool(re.match(r"^[A-Za-z0-9_\-]+(\[[A-Za-z0-9_\-,]+\])?([=<>!~]=?[A-Za-z0-9_.\-]+)?$", value))
+    return bool(
+        re.match(r"^[A-Za-z0-9_\-]+(\[[A-Za-z0-9_\-,]+\])?([=<>!~]=?[A-Za-z0-9_.\-]+)?$", value)
+    )

@@ -8,10 +8,12 @@ take the empirical 2.5th and 97.5th percentiles over 10 000 iterations.
 from __future__ import annotations
 
 import math
-from typing import Callable, Sequence, TypeVar
+from collections.abc import Callable, Sequence
+from typing import TypeVar
 
 try:
     import numpy as np  # type: ignore[import-not-found]
+
     _NUMPY = True
 except ImportError:  # pragma: no cover
     _NUMPY = False

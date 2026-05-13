@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Callable
 
 from agenteval.sandbox.base import Sandbox, SandboxFactory
 from agenteval.sandbox.docker import DockerSandbox

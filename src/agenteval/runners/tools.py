@@ -108,9 +108,7 @@ def dispatch_tool(
         if name == "Write":
             return sandbox.write_file(args["path"], args["content"])
         if name == "Edit":
-            return sandbox.edit_file(
-                args["path"], args["old_string"], args["new_string"]
-            )
+            return sandbox.edit_file(args["path"], args["old_string"], args["new_string"])
         if name == "Bash":
             timeout = float(args.get("timeout") or default_bash_timeout)
             timeout = min(timeout, max_bash_timeout)

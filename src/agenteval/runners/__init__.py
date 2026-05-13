@@ -8,7 +8,7 @@ M3.
 """
 
 from agenteval.runners.anthropic import AnthropicRunner
-from agenteval.runners.base import RunOutcome, Runner
+from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.google import GoogleRunner
 from agenteval.runners.mock import MockRunner, MockScript
 from agenteval.runners.openai import OpenAIRunner

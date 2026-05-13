@@ -5,9 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-TrajectoryTool = Literal[
-    "Read", "Write", "Edit", "Bash", "Glob", "Grep", "Other"
-]
+TrajectoryTool = Literal["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Other"]
 
 
 @dataclass(frozen=True)

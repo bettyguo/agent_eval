@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -54,7 +54,7 @@ def export_leaderboard(
     secondary_rows = [_row(e) for e in secondary]
 
     export = LeaderboardExport(
-        generated_at=datetime.now(timezone.utc).isoformat(),
+        generated_at=datetime.now(UTC).isoformat(),
         schema_version="1",
         primary=primary_rows,
         secondary=secondary_rows,

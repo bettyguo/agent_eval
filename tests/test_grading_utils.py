@@ -7,9 +7,9 @@ from pathlib import Path
 
 from agenteval.grading.types import TrajectoryStep
 from agenteval.grading.utils import (
+    assert_unchanged,
     ast_function_count,
     ast_normalised_equal,
-    assert_unchanged,
     count_assertions,
     first_modify_time,
     grep_final_message,

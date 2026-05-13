@@ -53,7 +53,7 @@ class Sandbox(ABC):
     @abstractmethod
     def teardown(self) -> None: ...
 
-    def __enter__(self) -> "Sandbox":
+    def __enter__(self) -> Sandbox:
         return self
 
     def __exit__(self, *args: Any) -> None:

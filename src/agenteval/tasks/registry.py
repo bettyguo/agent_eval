@@ -8,9 +8,9 @@ meta.yaml if unspecified at the task level).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
 import yaml
 
@@ -57,7 +57,7 @@ class TaskSet:
     source_dir: Path
 
     @classmethod
-    def load(cls, name: str) -> "TaskSet":
+    def load(cls, name: str) -> TaskSet:
         if name not in BUILTIN_TASK_SETS:
             raise TaskSetError(
                 f"unknown built-in task set {name!r}; known: {sorted(BUILTIN_TASK_SETS)}",
@@ -73,7 +73,7 @@ class TaskSet:
         return cls.from_dir(path)
 
     @classmethod
-    def from_dir(cls, path: str | Path) -> "TaskSet":
+    def from_dir(cls, path: str | Path) -> TaskSet:
         root = Path(path).resolve()
         if not root.is_dir():
             raise TaskSetError(f"not a directory: {root}", path=str(root))

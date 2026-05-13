@@ -8,11 +8,12 @@ the next assistant move; the harness loop then dispatches any tool calls.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Any
 
 from agenteval.grading.types import FinalState, TrajectoryStep
-from agenteval.runners.base import RunOutcome, Runner
+from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import dispatch_tool
 from agenteval.sandbox.base import Sandbox
 from agenteval.skills.bundle import SkillBundle

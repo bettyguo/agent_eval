@@ -9,7 +9,7 @@ this list via ADR.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 
 @dataclass(frozen=True)
@@ -106,7 +106,7 @@ def compute_flags(
             )
         )
 
-    now = datetime.now(timezone.utc).date()
+    now = datetime.now(UTC).date()
     if (now - pricing_last_audited).days > 30:
         flags.append(
             Flag(

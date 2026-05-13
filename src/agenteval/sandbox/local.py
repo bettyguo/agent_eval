@@ -13,7 +13,6 @@ import os
 import shutil
 import subprocess
 import tempfile
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
@@ -200,9 +199,7 @@ class LocalSubprocessSandbox(Sandbox):
         try:
             candidate.relative_to(self._root)
         except ValueError as exc:
-            raise SandboxError(
-                f"path escapes sandbox workdir: {path}", path=path
-            ) from exc
+            raise SandboxError(f"path escapes sandbox workdir: {path}", path=path) from exc
         return candidate
 
     def _write_file_internal(self, path: str, content: str) -> dict[str, Any]:

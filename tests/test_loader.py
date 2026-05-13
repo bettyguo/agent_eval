@@ -14,7 +14,6 @@ def test_loads_reference_task_set(reference_task_set: TaskSet):
     assert reference_task_set.name == "skill-specific-v1"
     assert reference_task_set.panel == "primary"
     assert len(reference_task_set.tasks) == 20
-    ids = {t.id for t in reference_task_set.tasks}
     # 4 tasks per category × 5 categories.
     expected_categories = {
         "tdd-enforcement",

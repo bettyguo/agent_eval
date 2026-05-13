@@ -39,13 +39,13 @@ class SkillBundle:
     source: str  # "dir:<path>" | "claude-md:<path>" | "empty"
 
     @classmethod
-    def empty(cls) -> "SkillBundle":
+    def empty(cls) -> SkillBundle:
         """The no-skills baseline. Stable hash across runs."""
         h = hashlib.sha256(EMPTY_BUNDLE_SENTINEL.encode("utf-8")).hexdigest()
         return cls(skills=(), hash=h, source="empty")
 
     @classmethod
-    def from_dir(cls, path: str | Path) -> "SkillBundle":
+    def from_dir(cls, path: str | Path) -> SkillBundle:
         root = Path(path).resolve()
         if not root.is_dir():
             raise SkillBundleError(f"not a directory: {root}", path=str(root))
@@ -73,7 +73,7 @@ class SkillBundle:
         return cls(skills=tuple(skills), hash=bundle_hash, source=f"dir:{root}")
 
     @classmethod
-    def from_claude_md(cls, path: str | Path) -> "SkillBundle":
+    def from_claude_md(cls, path: str | Path) -> SkillBundle:
         """Compatibility loader: a single CLAUDE.md becomes a synthetic single-skill bundle."""
         src = Path(path).resolve()
         if not src.is_file():
@@ -116,18 +116,12 @@ def _parse_skill_md(path: Path, skill_dir: Path) -> Skill:
     name = meta.get("name")
     description = meta.get("description")
     if not isinstance(name, str) or not name:
-        raise SkillBundleError(
-            f"{path} frontmatter missing required 'name'", path=str(path)
-        )
+        raise SkillBundleError(f"{path} frontmatter missing required 'name'", path=str(path))
     if not isinstance(description, str) or not description:
-        raise SkillBundleError(
-            f"{path} frontmatter missing required 'description'", path=str(path)
-        )
+        raise SkillBundleError(f"{path} frontmatter missing required 'description'", path=str(path))
     license_value = meta.get("license")
     if license_value is not None and not isinstance(license_value, str):
-        raise SkillBundleError(
-            f"{path} 'license' must be a string if present", path=str(path)
-        )
+        raise SkillBundleError(f"{path} 'license' must be a string if present", path=str(path))
 
     extras: list[Path] = []
     for sibling in sorted(skill_dir.rglob("*")):
@@ -153,5 +147,5 @@ def _split_frontmatter(text: str) -> tuple[str | None, str]:
     if end_idx == -1:
         return None, text
     fm = rest[:end_idx]
-    body = rest[end_idx + len("\n---"):].lstrip("\r\n")
+    body = rest[end_idx + len("\n---") :].lstrip("\r\n")
     return fm, body

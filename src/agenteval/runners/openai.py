@@ -13,7 +13,7 @@ from typing import Any
 
 from agenteval.errors import RunnerError
 from agenteval.grading.types import FinalState, TrajectoryStep
-from agenteval.runners.base import RunOutcome, Runner
+from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import (
     TOOL_DEFINITIONS,
     dispatch_tool,
@@ -102,9 +102,7 @@ class OpenAIRunner(Runner):
                     seed=seed,
                 )
             except Exception as exc:
-                raise RunnerError(
-                    f"OpenAI API call failed: {exc}", provider="openai"
-                ) from exc
+                raise RunnerError(f"OpenAI API call failed: {exc}", provider="openai") from exc
 
             usage = getattr(response, "usage", None)
             if usage is not None:

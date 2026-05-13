@@ -11,8 +11,8 @@ import ast
 import hashlib
 import re
 import subprocess
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, Sequence
 
 from agenteval.grading.types import TrajectoryStep
 
@@ -173,8 +173,7 @@ def ast_function_count(path: str | Path) -> int:
     except SyntaxError:
         return 0
     return sum(
-        1 for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        1 for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     )
 
 

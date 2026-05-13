@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import yaml
@@ -34,7 +34,7 @@ class PricingTable:
         return self.prices[key]
 
     def is_stale(self, *, on: date | None = None) -> bool:
-        as_of = on or datetime.now(timezone.utc).date()
+        as_of = on or datetime.now(UTC).date()
         return (as_of - self.last_audited).days > STALE_THRESHOLD_DAYS
 
 
@@ -71,9 +71,7 @@ def load_pricing(path: str | Path | None = None) -> PricingTable:
                 "output_per_mtok": float(entry["output_per_mtok"]),
             }
 
-    return PricingTable(
-        last_audited=last_audited, prices=prices, yaml_hash=yaml_hash
-    )
+    return PricingTable(last_audited=last_audited, prices=prices, yaml_hash=yaml_hash)
 
 
 def compute_cost_per_attempt(

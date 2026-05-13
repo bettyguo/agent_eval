@@ -11,13 +11,11 @@ that CI then aggregates.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from agenteval.errors import LeaderboardIneligible, VerifierMismatch
-from agenteval.harness import CANONICAL_SEEDS, Harness, Result
+from agenteval.errors import LeaderboardIneligible
+from agenteval.harness import Harness, Result
 from agenteval.metrics import load_pricing
 from agenteval.reproducibility import compute_entry_hash
 from agenteval.runners.anthropic import AnthropicRunner
@@ -102,10 +100,7 @@ def build_leaderboard_entry(result: Result) -> dict[str, Any]:
             "last_audited": result.pricing_last_audited,
         },
         "metrics": result.summary(),
-        "flags": [
-            {"name": f.name, "why": f.why, "details": f.details}
-            for f in result.flags
-        ],
+        "flags": [{"name": f.name, "why": f.why, "details": f.details} for f in result.flags],
         "per_attempt": [a.as_dict() for a in result.per_attempt],
         "verification": {"verified": False, "report": None},
     }
@@ -163,7 +158,9 @@ def verify_entry(
     provider = runner_meta["provider"]
     model = runner_meta["model"]
     if provider == "anthropic":
-        runner = AnthropicRunner(model=model, temperature=runner_meta["temperature"], api_key=api_key)
+        runner = AnthropicRunner(
+            model=model, temperature=runner_meta["temperature"], api_key=api_key
+        )
     elif provider == "openai":
         runner = OpenAIRunner(model=model, temperature=runner_meta["temperature"], api_key=api_key)
     elif provider == "google":
@@ -215,32 +212,23 @@ def verify_entry(
     cost_ok = True
     latency_ok = True
     try:
-        orig_cost = (
-            entry["metrics"].get("cost_usd", {}).get("median", 0.0)
-        )
-        new_cost = (
-            new_entry["metrics"].get("cost_usd", {}).get("median", 0.0)
-        )
+        orig_cost = entry["metrics"].get("cost_usd", {}).get("median", 0.0)
+        new_cost = new_entry["metrics"].get("cost_usd", {}).get("median", 0.0)
         if orig_cost > 0:
             cost_ok = abs(new_cost - orig_cost) / orig_cost <= COST_TOLERANCE_FRAC
     except Exception:
         cost_ok = True
     try:
-        orig_lat = (
-            entry["metrics"].get("latency_s", {}).get("p50", 0.0)
-        )
-        new_lat = (
-            new_entry["metrics"].get("latency_s", {}).get("p50", 0.0)
-        )
+        orig_lat = entry["metrics"].get("latency_s", {}).get("p50", 0.0)
+        new_lat = new_entry["metrics"].get("latency_s", {}).get("p50", 0.0)
         if orig_lat > 0:
             latency_ok = abs(new_lat - orig_lat) / orig_lat <= LATENCY_TOLERANCE_FRAC
     except Exception:
         latency_ok = True
 
-    fingerprint_match = (
-        entry["runner"].get("model_response_fingerprint")
-        == new_entry["runner"].get("model_response_fingerprint")
-    )
+    fingerprint_match = entry["runner"].get("model_response_fingerprint") == new_entry[
+        "runner"
+    ].get("model_response_fingerprint")
 
     if not entry_hash_match:
         notes.append("entry_hash mismatch (likely pricing.yaml or runner config drift)")

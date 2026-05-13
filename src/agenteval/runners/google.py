@@ -7,17 +7,15 @@ docs/methodology.md §2.4).
 
 from __future__ import annotations
 
-import json
 import time
 from typing import Any
 
 from agenteval.errors import RunnerError
 from agenteval.grading.types import FinalState, TrajectoryStep
-from agenteval.runners.base import RunOutcome, Runner
+from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import (
     TOOL_DEFINITIONS,
     dispatch_tool,
-    format_tool_result_for_provider,
 )
 from agenteval.sandbox.base import Sandbox
 from agenteval.skills.bundle import SkillBundle
@@ -54,11 +52,7 @@ class GoogleRunner(Runner):
                 provider="google",
             ) from exc
         try:
-            return (
-                genai.Client(api_key=self.api_key)
-                if self.api_key
-                else genai.Client()
-            )
+            return genai.Client(api_key=self.api_key) if self.api_key else genai.Client()
         except Exception as exc:
             raise RunnerError(
                 f"failed to construct google-genai client: {exc}",

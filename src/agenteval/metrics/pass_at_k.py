@@ -13,7 +13,7 @@ See docs/metrics.md §1.1 for adversarial considerations.
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 
 def pass_at_k(n: int, c: int, k: int) -> float:
@@ -53,9 +53,7 @@ def pass_at_1(per_task_pass_counts: Sequence[int], n_seeds: int) -> float:
     """
     if not per_task_pass_counts:
         return 0.0
-    return sum(pass_at_k(n_seeds, c, 1) for c in per_task_pass_counts) / len(
-        per_task_pass_counts
-    )
+    return sum(pass_at_k(n_seeds, c, 1) for c in per_task_pass_counts) / len(per_task_pass_counts)
 
 
 def pass_caret_k(per_task_pass_counts: Sequence[int], k: int) -> float:

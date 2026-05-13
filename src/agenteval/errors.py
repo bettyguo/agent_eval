@@ -53,11 +53,11 @@ class RunnerError(AgentevalError):
         )
 
 
-class LeaderboardIneligible(AgentevalError):
+class LeaderboardIneligible(AgentevalError):  # noqa: N818  - reads more naturally as a state than an error
     code = "leaderboard_ineligible"
 
 
-class VerifierMismatch(AgentevalError):
+class VerifierMismatch(AgentevalError):  # noqa: N818  - "Mismatch" already conveys the failure
     code = "verifier_mismatch"
 
     def __init__(
@@ -69,9 +69,7 @@ class VerifierMismatch(AgentevalError):
         actual: Any,
         **details: Any,
     ) -> None:
-        super().__init__(
-            message, field=field, expected=expected, actual=actual, **details
-        )
+        super().__init__(message, field=field, expected=expected, actual=actual, **details)
 
 
 class GraderError(AgentevalError):
