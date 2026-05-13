@@ -378,7 +378,7 @@ For genuine causal claims (e.g., "this skill *causes* better TDD behavior becaus
 
 ## References
 
-The numbered links below are the methodology-recon sources surfaced during Phase 0. Sections above cite them inline by author/year.
+BibTeX entries for every reference in this section live at [`references.bib`](references.bib). The numbered links below are the methodology-recon sources surfaced during Phase 0. Sections above cite them inline by author/year.
 
 1. Liang et al., *Holistic Evaluation of Language Models (HELM)*, 2022. `arxiv.org/abs/2211.09110`.
 2. Srivastava et al., *Beyond the Imitation Game (BIG-bench)*, 2022. `arxiv.org/abs/2206.04615`.
