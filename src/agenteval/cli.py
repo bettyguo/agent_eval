@@ -11,8 +11,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from typing import Any
-
 import click
 from rich.console import Console
 from rich.table import Table
@@ -25,7 +23,7 @@ from agenteval.runners.anthropic import AnthropicRunner
 from agenteval.runners.google import GoogleRunner
 from agenteval.runners.openai import OpenAIRunner
 from agenteval.skills.bundle import SkillBundle
-from agenteval.submit import build_leaderboard_entry, verify_entry
+from agenteval.submit import verify_entry
 from agenteval.tasks.registry import BUILTIN_TASK_SETS, TaskSet
 
 console = Console()
@@ -100,6 +98,12 @@ def version() -> None:
     default=False,
     help="Print the run plan and exit without making API calls.",
 )
+@click.option(
+    "--remote",
+    type=str,
+    default=None,
+    help="SSH host (user@host or host) to run the eval on remotely. See docs/remote-runner.md.",
+)
 def eval_cmd(
     skills: str,
     tasks: str,
@@ -110,8 +114,32 @@ def eval_cmd(
     exploratory: bool,
     out: Path | None,
     dry_run: bool,
+    remote: str | None,
 ) -> None:
     """Run an evaluation."""
+    if remote is not None:
+        if dry_run:
+            _die(AgentevalError("--remote is incompatible with --dry-run"))
+        if out is None:
+            _die(AgentevalError("--remote requires --out <path>"))
+        from agenteval.remote import run_remote
+
+        try:
+            rc = run_remote(
+                remote_host=remote,
+                skill_bundle_path=skills,
+                task_set=tasks,
+                model=model,
+                runner=runner,
+                temperature=temperature,
+                exploratory=exploratory,
+                seeds=seeds,
+                out_path=out,
+            )
+            sys.exit(rc)
+        except AgentevalError as exc:
+            _die(exc)
+
     try:
         bundle = _load_bundle(skills)
         task_set = _load_task_set(tasks)

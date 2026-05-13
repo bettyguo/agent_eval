@@ -1,0 +1,31 @@
+# Pinned upper-bound constraints for the agenteval runtime + dev environment.
+#
+# Per Phase 3 §6.6 (reproducibility hardening). These are NOT exact pins
+# (pyproject.toml carries minimum versions); these are upper bounds to
+# protect against major-version breakage in transitive deps. Maintainers
+# bump the upper bounds intentionally after a smoke run.
+#
+# Use:
+#   pip install -e . -c constraints.txt
+#
+# Refresh:
+#   pip-compile --upgrade --strip-extras -o constraints.txt pyproject.toml
+#   (then sanity-check pytest + a real-API smoke before committing)
+
+# Runtime
+anthropic<1.0
+openai<3.0
+google-genai<1.0
+pydantic>=2.6,<3.0
+pyyaml<7.0
+click<9.0
+rich<15.0
+docker<8.0
+numpy>=1.26,<3.0
+
+# Dev
+pytest>=8,<10
+pytest-cov<10.0
+ruff<1.0
+mypy<2.0
+pre-commit<5.0

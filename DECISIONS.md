@@ -177,6 +177,28 @@
   - docs/metrics.md adds `timeout_rate` to the flag/metric registry.
   - `skills-baseline/no-skills/` becomes a multi-file directory with per-provider baseline configs.
 
+---
+
+## ADR-0017 — `sandbox_image_sha` is stored-but-not-hashed metadata; drift flagged not rejected
+
+- **Date:** 2026-05-13
+- **Status:** Accepted
+- **Context:** Phase 3 §6.6 (reproducibility hardening) requires the base sandbox image to be pinned by SHA256 digest (not just by tag, which can shift silently). The open question was whether `sandbox_image_sha` should be a component of the canonical `entry_hash`.
+  - Pro-hashing: makes the run cryptographically tied to a specific kernel-level execution environment. Re-verifying on a different image SHA cannot mask drift.
+  - Con-hashing: every routine image update (security patches, dependency bumps) invalidates every prior leaderboard entry's hash. Stale entries lose verified status en masse. Maintenance burden becomes prohibitive.
+  - Mirror precedent: `model_response_fingerprint` is treated the same way by ADR-0016 — stored, watched for drift, *not* hashed.
+- **Decision:**
+  1. `sandbox_image_sha` is recorded on every leaderboard entry under `sandbox.image_sha`.
+  2. It is **not** part of `entry_hash`.
+  3. The verifier loads the pinned image SHA from `sandbox/image.lock` (which is committed to the repo); if it differs from the submission's recorded SHA, the verifier raises a new flag `sandbox-drift` (analogous to `model-drift` from ADR-0016) and proceeds with verification. The flag warns readers that the execution environment changed but does not invalidate the entry.
+  4. `sandbox/image.lock` records both the tag (e.g. `python:3.11-bookworm-slim`) and the SHA256 digest. The pinning is done by `scripts/pin_image_sha.sh`, which maintainers run on intentional image bumps.
+- **Consequences:**
+  - `docs/metrics.md` flag registry gains `sandbox-drift`.
+  - `src/agenteval/sandbox/docker.py` reads `image.lock` and records the SHA in run metadata.
+  - `src/agenteval/submit.py` `build_leaderboard_entry` includes `sandbox.image_sha`.
+  - The verifier compares submission vs. current image SHA and raises `sandbox-drift` on mismatch.
+  - Image SHA bumps no longer mass-invalidate the leaderboard — entries from older SHAs simply carry the flag.
+
 
 ---
 
