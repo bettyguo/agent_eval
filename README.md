@@ -63,7 +63,7 @@ re-verifies; merge after the verifier agrees.
 ## Layout
 
 ```
-src/agenteval/         harness, runners, metrics, sandbox, grading
+src/                   harness, runners, metrics, sandbox, grading
 tasks/skill-specific-v1/   20 hand-curated task YAMLs
 sandbox/               Docker base image
 frontend/              Next.js leaderboard (static export)
