@@ -165,7 +165,7 @@ class Harness:
             raise ValueError("custom_seeds incompatible with canonical_seeds=True")
 
         self.runner = runner
-        self.model = model or getattr(runner, "model", "unknown-model")
+        self.model: str = model or str(getattr(runner, "model", "unknown-model"))
         self.provider = provider or runner.name
         self.temperature = temperature
         self.seeds: tuple[int, ...] = (

@@ -10,9 +10,9 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
-from agenteval.grading.types import FinalState, TrajectoryStep
+from agenteval.grading.types import FinalState, TrajectoryStep, TrajectoryTool
 from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import dispatch_tool
 from agenteval.sandbox.base import Sandbox
@@ -142,6 +142,7 @@ class MockRunner(Runner):
         )
 
 
-def _norm_name(name: str) -> str:
-    known = {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}
-    return name if name in known else "Other"
+def _norm_name(name: str) -> TrajectoryTool:
+    if name in {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}:
+        return cast(TrajectoryTool, name)
+    return "Other"

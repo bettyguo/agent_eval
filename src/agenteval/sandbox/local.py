@@ -88,10 +88,14 @@ class LocalSubprocessSandbox(Sandbox):
                 env={**os.environ},
             )
         except subprocess.TimeoutExpired as exc:
+            stdout_b = exc.stdout
+            stderr_b = exc.stderr
+            stdout = stdout_b if isinstance(stdout_b, str) else (stdout_b.decode("utf-8", errors="replace") if stdout_b else "")
+            stderr = stderr_b if isinstance(stderr_b, str) else (stderr_b.decode("utf-8", errors="replace") if stderr_b else "")
             return {
                 "exit_code": 124,
-                "stdout": exc.stdout or "",
-                "stderr": (exc.stderr or "") + f"\n[timeout after {timeout}s]",
+                "stdout": stdout,
+                "stderr": stderr + f"\n[timeout after {timeout}s]",
                 "timed_out": True,
             }
         return {

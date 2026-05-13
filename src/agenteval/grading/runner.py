@@ -139,16 +139,16 @@ class _Timeout:
     def __enter__(self) -> _Timeout:
         if not self._enabled:
             return self
-        self._prev_handler = signal.signal(signal.SIGALRM, self._on_timeout)
-        signal.alarm(self.seconds)
+        self._prev_handler = signal.signal(signal.SIGALRM, self._on_timeout)  # type: ignore[attr-defined]  # SIGALRM is POSIX-only; this branch is platform-gated
+        signal.alarm(self.seconds)  # type: ignore[attr-defined]
         return self
 
     def __exit__(self, *args: Any) -> None:
         if not self._enabled:
             return
-        signal.alarm(0)
+        signal.alarm(0)  # type: ignore[attr-defined]
         if self._prev_handler is not None:
-            signal.signal(signal.SIGALRM, self._prev_handler)
+            signal.signal(signal.SIGALRM, self._prev_handler)  # type: ignore[attr-defined]
 
     def _on_timeout(self, *_: Any) -> None:
         raise GraderError(

@@ -19,6 +19,7 @@ from agenteval.harness import Harness, Result
 from agenteval.metrics import load_pricing
 from agenteval.reproducibility import compute_entry_hash
 from agenteval.runners.anthropic import AnthropicRunner
+from agenteval.runners.base import Runner
 from agenteval.runners.google import GoogleRunner
 from agenteval.runners.openai import OpenAIRunner
 from agenteval.skills.bundle import SkillBundle
@@ -157,6 +158,7 @@ def verify_entry(
     runner_meta = entry["runner"]
     provider = runner_meta["provider"]
     model = runner_meta["model"]
+    runner: Runner
     if provider == "anthropic":
         runner = AnthropicRunner(
             model=model, temperature=runner_meta["temperature"], api_key=api_key

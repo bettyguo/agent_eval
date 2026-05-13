@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Sequence
-from typing import TypeVar
+from typing import Any, TypeVar
 
 try:
-    import numpy as np  # type: ignore[import-not-found]
+    import numpy as np
 
     _NUMPY = True
 except ImportError:  # pragma: no cover
@@ -43,33 +43,32 @@ def bootstrap_ci(
     n = len(samples)
     alpha = (1.0 - ci) / 2.0
 
+    sample_list = list(samples)
     if _NUMPY:
-        rng = np.random.default_rng(seed)
-        idx = rng.integers(0, n, size=(iterations, n))
+        np_rng = np.random.default_rng(seed)
+        idx = np_rng.integers(0, n, size=(iterations, n))
         # Resample and compute statistic; statistic operates on the resampled list.
         # We accept the Python-call overhead because statistics aren't necessarily
         # vectorisable (e.g., pass@k uses combinatorials).
-        stats = np.empty(iterations, dtype=float)
-        sample_list = list(samples)
+        np_stats: Any = np.empty(iterations, dtype=float)
         for i in range(iterations):
             resample = [sample_list[j] for j in idx[i]]
-            stats[i] = float(statistic(resample))
-        lo = float(np.quantile(stats, alpha))
-        hi = float(np.quantile(stats, 1.0 - alpha))
+            np_stats[i] = float(statistic(resample))
+        lo = float(np.quantile(np_stats, alpha))
+        hi = float(np.quantile(np_stats, 1.0 - alpha))
         return (lo, hi)
 
     # Pure-stdlib fallback (slow). Used if numpy isn't installed.
     import random
 
-    rng = random.Random(seed)
-    sample_list = list(samples)
-    stats: list[float] = []
+    py_rng = random.Random(seed)
+    py_stats: list[float] = []
     for _ in range(iterations):
-        resample = [rng.choice(sample_list) for _ in range(n)]
-        stats.append(float(statistic(resample)))
-    stats.sort()
-    lo = stats[int(math.floor(alpha * iterations))]
-    hi = stats[min(iterations - 1, int(math.ceil((1.0 - alpha) * iterations)) - 1)]
+        resample = [py_rng.choice(sample_list) for _ in range(n)]
+        py_stats.append(float(statistic(resample)))
+    py_stats.sort()
+    lo = py_stats[int(math.floor(alpha * iterations))]
+    hi = py_stats[min(iterations - 1, int(math.ceil((1.0 - alpha) * iterations)) - 1)]
     return (lo, hi)
 
 

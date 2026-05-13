@@ -10,8 +10,10 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from typing import cast
+
 from agenteval.errors import RunnerError
-from agenteval.grading.types import FinalState, TrajectoryStep
+from agenteval.grading.types import FinalState, TrajectoryStep, TrajectoryTool
 from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import (
     TOOL_DEFINITIONS,
@@ -46,7 +48,7 @@ class AnthropicRunner(Runner):
 
     def _client(self) -> Any:
         try:
-            import anthropic  # type: ignore[import-not-found]
+            import anthropic
         except ImportError as exc:
             raise RunnerError(
                 "anthropic SDK not installed; run `pip install anthropic`",
@@ -182,6 +184,7 @@ def _build_system_prompt(bundle: SkillBundle) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def _normalise_tool_name(name: str) -> str:
-    known = {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}
-    return name if name in known else "Other"
+def _normalise_tool_name(name: str) -> TrajectoryTool:
+    if name in {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}:
+        return cast(TrajectoryTool, name)
+    return "Other"

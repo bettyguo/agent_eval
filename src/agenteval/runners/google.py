@@ -8,10 +8,10 @@ docs/methodology.md §2.4).
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, cast
 
 from agenteval.errors import RunnerError
-from agenteval.grading.types import FinalState, TrajectoryStep
+from agenteval.grading.types import FinalState, TrajectoryStep, TrajectoryTool
 from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import (
     TOOL_DEFINITIONS,
@@ -45,7 +45,7 @@ class GoogleRunner(Runner):
 
     def _client(self) -> Any:
         try:
-            from google import genai  # type: ignore[import-not-found]
+            from google import genai
         except ImportError as exc:
             raise RunnerError(
                 "`google-genai` SDK not installed; run `pip install google-genai`",
@@ -67,11 +67,13 @@ class GoogleRunner(Runner):
         sandbox: Sandbox,
         seed: int,
     ) -> RunOutcome:
-        from google.genai import types as gtypes  # type: ignore[import-not-found]
+        from google.genai import types as gtypes
 
         client = self._client()
         system_text = _build_system_prompt(bundle)
-        google_tools = [gtypes.Tool(function_declarations=_to_google_function_decls())]
+        # Provider-SDK stubs are stricter than the wire-level reality; cast
+        # through Any rather than fight the FunctionDeclaration coercion.
+        google_tools: Any = [gtypes.Tool(function_declarations=_to_google_function_decls())]  # type: ignore[arg-type]
 
         chat = client.chats.create(
             model=self.model,
@@ -189,6 +191,7 @@ def _to_google_function_decls() -> list[dict[str, Any]]:
     ]
 
 
-def _norm_name(name: str) -> str:
-    known = {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}
-    return name if name in known else "Other"
+def _norm_name(name: str) -> TrajectoryTool:
+    if name in {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}:
+        return cast(TrajectoryTool, name)
+    return "Other"

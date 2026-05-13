@@ -46,7 +46,7 @@ def default_sandbox_factory() -> SandboxFactory:
 
 def _docker_daemon_reachable() -> bool:
     try:
-        import docker  # type: ignore[import-not-found]
+        import docker
     except ImportError:
         return False
     try:

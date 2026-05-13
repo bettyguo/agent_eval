@@ -38,9 +38,7 @@ jobs:
         run: ruff format --check src tests
 
       - name: Type check (mypy)
-        # Non-blocking until we burn down the existing type debt. Tracked in
-        # docs/good-first-issues.md (#5 - "make mypy --strict clean").
-        run: mypy src || true
+        run: mypy src
 
       - name: Tests
         run: pytest -q --color=yes

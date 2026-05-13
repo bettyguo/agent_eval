@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, cast
 
 from agenteval.errors import RunnerError
-from agenteval.grading.types import FinalState, TrajectoryStep
+from agenteval.grading.types import FinalState, TrajectoryStep, TrajectoryTool
 from agenteval.runners.base import Runner, RunOutcome
 from agenteval.runners.tools import (
     TOOL_DEFINITIONS,
@@ -47,7 +47,7 @@ class OpenAIRunner(Runner):
 
     def _client(self) -> Any:
         try:
-            from openai import OpenAI  # type: ignore[import-not-found]
+            from openai import OpenAI
         except ImportError as exc:
             raise RunnerError(
                 "openai SDK not installed; run `pip install openai`",
@@ -204,6 +204,7 @@ def _to_openai_tools() -> list[dict[str, Any]]:
     ]
 
 
-def _norm_name(name: str) -> str:
-    known = {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}
-    return name if name in known else "Other"
+def _norm_name(name: str) -> TrajectoryTool:
+    if name in {"Read", "Write", "Edit", "Bash", "Glob", "Grep"}:
+        return cast(TrajectoryTool, name)
+    return "Other"

@@ -267,7 +267,7 @@ class DockerSandbox(Sandbox):
         if self._client is not None:
             return
         try:
-            import docker  # type: ignore[import-not-found]
+            import docker
         except ImportError as exc:
             raise SandboxError("`docker` package not installed; run `pip install docker`") from exc
         try:

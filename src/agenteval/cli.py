@@ -122,6 +122,7 @@ def eval_cmd(
             _die(AgentevalError("--remote is incompatible with --dry-run"))
         if out is None:
             _die(AgentevalError("--remote requires --out <path>"))
+        assert out is not None  # narrowed by _die() above but mypy doesn't infer NoReturn here
         from agenteval.remote import run_remote
 
         try:
