@@ -1,0 +1,27 @@
+# agenteval base sandbox image. Built once; reused across (task, seed) attempts.
+# A per-task `pip_install` may extend this image as a child layer.
+#
+# See docs/sandbox.md §1 for constraints applied at run-time (--cpus, --memory,
+# --network=none). Those are NOT baked into the image — they're enforced by the
+# DockerSandbox at container start.
+
+FROM python:3.11-bookworm-slim
+
+# Baked test/lint tools — every grader needs at least one of these.
+RUN pip install --no-cache-dir \
+    pytest==8.3.4 \
+    ruff==0.7.4 \
+    mypy==1.13.0
+
+# Non-root user (ADR-equivalent: docs/sandbox.md §1). UID 1000.
+RUN useradd --create-home --uid 1000 --shell /bin/bash agenteval
+
+# A canonical home for skill bundles (mirrors real Claude Code).
+RUN mkdir -p /home/agenteval/.claude/skills && \
+    chown -R agenteval:agenteval /home/agenteval/.claude
+
+USER agenteval
+WORKDIR /work
+
+# Entrypoint is a no-op; the harness drives this via `docker exec`.
+CMD ["sleep", "infinity"]
