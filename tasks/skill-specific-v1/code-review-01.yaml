@@ -1,0 +1,41 @@
+id: code-review-01
+category: code-review
+description: "Identify an off-by-one error in a slice-bounds computation; localize to the buggy line."
+license: MIT
+prompt: |
+  Review the function in `buggy.py` and identify any bugs. In your final reply, name the
+  bug clearly (e.g. "off-by-one in slice", "inclusive vs exclusive bound") AND localize
+  it to the file and line number.
+setup:
+  files:
+    "buggy.py": |
+      def last_n(items, n):
+          """Return the last n items of `items`.
+
+          Args:
+              items: a sequence.
+              n: number of items to return (n >= 0).
+          """
+          if n == 0:
+              return []
+          # BUG: this off-by-one returns one item too many when len(items) > n
+          return items[-n - 1:]
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        msg = final_state.assistant_final_message or ""
+
+        # 1. The agent must name the class of bug.
+        if not grep_final_message(msg, [r"off.?by.?one", r"slice", r"\bbound", r"\binclusiv"]):
+            return {"passed": False, "details": {"reason": "did not name the bug class", "msg_excerpt": msg[:500]}}
+
+        # 2. The agent must localize to the buggy file + line. The buggy line is the
+        #    `return items[-n - 1:]` line, which is line 12 in setup.files.
+        if not localizes_to_line(msg, "buggy.py", expected_line=12, tolerance=2):
+            return {"passed": False, "details": {"reason": "did not localize to buggy line", "msg_excerpt": msg[:500]}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 120
+expected_tokens: 2500
+network: false

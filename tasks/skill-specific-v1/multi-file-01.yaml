@@ -1,0 +1,55 @@
+id: multi-file-01
+category: multi-file
+description: "Rename `legacy_parse` to `parse` across all 5 files; no stale references; tests pass."
+license: MIT
+prompt: |
+  The function `legacy_parse(input)` has been renamed to `parse(input)`. Update every
+  occurrence across the repository: imports, call sites, the definition itself. The
+  existing test suite must continue to pass. No references to the old name may remain
+  anywhere in the repository.
+setup:
+  files:
+    "core/__init__.py": ""
+    "core/parser.py": |
+      def legacy_parse(input):
+          """Trim and uppercase the input."""
+          return input.strip().upper()
+    "cli/__init__.py": ""
+    "cli/main.py": |
+      from core.parser import legacy_parse
+
+      def run(text):
+          return legacy_parse(text)
+    "tests/__init__.py": ""
+    "tests/test_parser.py": |
+      from core.parser import parse
+
+      def test_parse_strips_and_uppercases():
+          assert parse("  hello  ") == "HELLO"
+    "tests/test_cli.py": |
+      from cli.main import run
+
+      def test_run_uppercases():
+          assert run("xy") == "XY"
+    "pytest.ini": "[pytest]\ntestpaths = tests\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # 1. No stale references to "legacy_parse" anywhere in the repo (excluding the .git dir which isn't here).
+        stale = grep_repo(wd, r"\blegacy_parse\b", exclude=("__pycache__",))
+        if stale:
+            return {"passed": False, "details": {"reason": "stale references remain", "stale": [(str(p), n, line) for (p, n, line) in stale]}}
+
+        # 2. pytest passes.
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed after rename", "pytest_output": out[-2000:]}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 300
+expected_tokens: 5000
+network: false

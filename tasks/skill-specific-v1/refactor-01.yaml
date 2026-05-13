@@ -1,0 +1,62 @@
+id: refactor-01
+category: refactor
+description: "Behaviour-preserving extract-method on a small function; pre/post tests must both pass and a new helper function must exist."
+license: MIT
+prompt: |
+  Refactor `service.py` to improve readability. Specifically: extract the body of the
+  inner for-loop into a new top-level function with a descriptive name. The existing
+  tests in `test_service.py` must continue to pass.
+setup:
+  files:
+    "service.py": |
+      def total_premium(orders):
+          """Sum premium charges across orders.
+
+          Each order is a dict with keys: 'amount', 'is_express', 'is_overseas'.
+          """
+          total = 0
+          for o in orders:
+              amount = o["amount"]
+              charge = 0
+              if o.get("is_express"):
+                  charge += amount * 0.10
+              if o.get("is_overseas"):
+                  charge += amount * 0.15
+              total += charge
+          return total
+    "test_service.py": |
+      from service import total_premium
+
+      def test_no_extras():
+          assert total_premium([{"amount": 100}]) == 0
+
+      def test_express_only():
+          assert abs(total_premium([{"amount": 100, "is_express": True}]) - 10.0) < 1e-9
+
+      def test_overseas_only():
+          assert abs(total_premium([{"amount": 100, "is_overseas": True}]) - 15.0) < 1e-9
+
+      def test_both():
+          assert abs(total_premium([{"amount": 100, "is_express": True, "is_overseas": True}]) - 25.0) < 1e-9
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # 1. Tests must pass after the refactor.
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed after refactor", "pytest_output": out[-2000:]}}
+
+        # 2. There must be at least 2 functions in service.py (the original + the extracted helper).
+        n_funcs = ast_function_count(wd / "service.py")
+        if n_funcs < 2:
+            return {"passed": False, "details": {"reason": f"expected >=2 functions (extract-method), got {n_funcs}"}}
+
+        return {"passed": True, "details": {"n_funcs": n_funcs}}
+time_budget_s: 240
+expected_tokens: 4000
+network: false

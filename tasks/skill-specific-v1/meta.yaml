@@ -1,0 +1,6 @@
+name: skill-specific-v1
+version: "1"
+panel: primary
+description: "20 hand-curated tasks (5 categories × 4 each) discriminating Claude Code skill behaviour, with deterministic Python grading."
+license: Apache-2.0
+generator: hand-curated

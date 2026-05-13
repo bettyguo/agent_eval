@@ -1,0 +1,53 @@
+id: tdd-enforcement-01
+category: tdd-enforcement
+description: "Implement fizzbuzz(n) using strict TDD; tests must exist and fail before the implementation is completed."
+license: MIT
+prompt: |
+  Implement `fizzbuzz(n)` (standard FizzBuzz rules for 1 <= n <= 100, returning a list[str]
+  where multiples of 3 are "Fizz", multiples of 5 are "Buzz", multiples of both are
+  "FizzBuzz", and others are the number as a string) using strict test-driven development.
+
+  Workflow you must follow:
+    1. Create `test_fizzbuzz.py` with at least 4 assertions covering the rules.
+    2. Run `pytest -q` and observe the failures.
+    3. Implement `fizzbuzz(n)` in `fizzbuzz.py`.
+    4. Run `pytest -q` again; all tests must pass.
+setup:
+  files:
+    "fizzbuzz.py": "def fizzbuzz(n):\n    pass\n"
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # 1. Tests written before the implementation body changed.
+        t_tests = first_modify_time(trajectory, "test_fizzbuzz.py")
+        t_impl = first_modify_time(trajectory, "fizzbuzz.py")
+        if t_tests is None:
+            return {"passed": False, "details": {"reason": "no test_fizzbuzz.py was written"}}
+        if t_impl is None:
+            return {"passed": False, "details": {"reason": "fizzbuzz.py was not modified"}}
+        if t_tests >= t_impl:
+            return {"passed": False, "details": {"reason": "implementation preceded or coincided with tests", "t_tests": t_tests, "t_impl": t_impl}}
+
+        # 2. The trajectory shows a failing pytest run before a passing one.
+        if not ran_pytest_failure_then_success(trajectory):
+            return {"passed": False, "details": {"reason": "no failing-then-passing pytest invocation in trajectory"}}
+
+        # 3. Test file has enough assertions.
+        n_asserts = count_assertions(wd / "test_fizzbuzz.py")
+        if n_asserts < 4:
+            return {"passed": False, "details": {"reason": f"insufficient assertions ({n_asserts} < 4)"}}
+
+        # 4. Final pytest run passes.
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "final pytest run failed", "pytest_output": out[-2000:]}}
+
+        return {"passed": True, "details": {"n_asserts": n_asserts}}
+time_budget_s: 240
+expected_tokens: 4000
+network: false

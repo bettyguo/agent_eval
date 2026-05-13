@@ -1,0 +1,67 @@
+id: style-adherence-01
+category: style-adherence
+description: "Rewrite a Python module to pass `ruff check --select=E,F,I,N,UP,B` with zero violations and no suppression markers."
+license: MIT
+prompt: |
+  Rewrite `app.py` so that `ruff check --select=E,F,I,N,UP,B app.py` reports zero
+  violations. You may NOT edit `pyproject.toml`. You may NOT add `# noqa`,
+  `# type: ignore`, or any other suppression marker. The functional behaviour must be
+  preserved: the existing tests in `test_app.py` must still pass.
+setup:
+  files:
+    "app.py": |
+      import os, sys
+
+      def AddOne(x):
+        Y=x+1
+        return Y
+
+      def main():
+        for i in range(0,10):
+          print(AddOne(i))
+    "test_app.py": |
+      from app import AddOne
+
+      def test_addone():
+          assert AddOne(0) == 1
+          assert AddOne(41) == 42
+    "pyproject.toml": |
+      [tool.ruff]
+      line-length = 100
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import hashlib
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # pyproject.toml must remain byte-exact.
+        expected_pyproject = "[tool.ruff]\nline-length = 100\n"
+        actual_pyproject = (wd / "pyproject.toml").read_text(encoding="utf-8")
+        if actual_pyproject != expected_pyproject:
+            return {"passed": False, "details": {"reason": "pyproject.toml was modified"}}
+
+        # No suppression markers in app.py.
+        if not no_suppressions(wd / "app.py", forbidden=["noqa", "type: ignore", "type:ignore"]):
+            return {"passed": False, "details": {"reason": "suppression markers found in app.py"}}
+
+        # ruff check must pass.
+        rc, out = run_command(
+            ["ruff", "check", "--select=E,F,I,N,UP,B", "app.py"],
+            cwd=wd,
+            timeout=30.0,
+        )
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "ruff reported violations", "ruff_output": out[-2000:]}}
+
+        # Behaviour preservation: original test must still pass.
+        rc_t, out_t = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc_t != 0:
+            return {"passed": False, "details": {"reason": "tests failed after rewrite", "pytest_output": out_t[-2000:]}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 240
+expected_tokens: 4000
+network: false
