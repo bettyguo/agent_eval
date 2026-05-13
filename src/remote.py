@@ -1,18 +1,18 @@
-"""SSH-based remote runner for the two-VM verifier rule + slow-Docker hosts.
+"""SSH-based remote runner.
 
-Phase 3 §6.7 implementation. Documented in `docs/remote-runner.md`.
+Used by the two-VM verifier (verifier-B runs on a remote VPS) and by users
+on hosts where Docker is slow (macOS / Windows Docker Desktop).
 
-Limitations (intentional in v1):
+Limitations in v1:
 - Only built-in task-set names are supported on the remote (local task-set
-  directories are a v1.1 enhancement).
-- Skill bundles can be a local directory (tarballed + transferred) or the
-  literal string "none" (passed through).
-- Output is collected via remote result.json + scp back; no streaming.
+  directories would need a separate tarball path).
+- Skill bundles can be a local directory (tarballed + scp'd) or the literal
+  string "none".
+- No streaming output: result.json is scp'd back after completion.
 
-Security:
-- API keys are forwarded via `ssh SendEnv`. Configure remote `sshd_config`
-  with `AcceptEnv ANTHROPIC_API_KEY OPENAI_API_KEY GOOGLE_API_KEY`.
-- The remote temp workdir is removed after the run (best-effort).
+API keys are forwarded via `ssh SendEnv`; the remote `sshd_config` needs
+`AcceptEnv ANTHROPIC_API_KEY OPENAI_API_KEY GOOGLE_API_KEY`. The remote
+temp workdir is removed after the run (best-effort).
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ def run_remote(
     """Execute `agenteval eval ...` on `remote_host`. Return the remote exit code.
 
     The harness must be installed on the remote and the agenteval-sandbox:base
-    image must be built there (see docs/remote-runner.md).
+    image must be built there.
     """
     _validate_host(remote_host)
     if not _ssh_available():

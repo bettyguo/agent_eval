@@ -1,12 +1,10 @@
-"""Submission + verification machinery (M5).
+"""Submission + verification.
 
-Implements docs/reproducibility.md §3 (verifier) and ADR-0015 enforcement at
-the submission gate.
-
-Per anti-pattern #10 of the master prompt: every primary-panel leaderboard
-entry must be re-verified in TWO different VMs. The two-VM rule is enforced
-by CI, not by this module — the module produces single-VM `verify` reports
-that CI then aggregates.
+`build_leaderboard_entry` constructs the canonical hash-stamped JSON;
+`verify_entry` performs a single-VM re-run and compares structured features.
+The two-VM rule (re-verify in two cloud zones, both must agree on
+strict-equality fields) is enforced by CI; this module produces single-VM
+reports that CI aggregates.
 """
 
 from __future__ import annotations
@@ -59,13 +57,13 @@ class VerificationReport:
 
 
 def build_leaderboard_entry(result: Result) -> dict[str, Any]:
-    """Construct the canonical LeaderboardEntry JSON (DESIGN.md §1.2).
+    """Construct the canonical LeaderboardEntry JSON.
 
     Raises LeaderboardIneligible if the result wouldn't qualify.
     """
     if not result.leaderboard_eligible:
         raise LeaderboardIneligible(
-            "result not eligible: see eligibility criteria in DESIGN.md §1.2",
+            "result not eligible for the primary leaderboard (check temperature, seed list, panel)",
             seeds=list(result.seeds),
             temperature=result.temperature,
             task_set_panel=result.task_set_panel,

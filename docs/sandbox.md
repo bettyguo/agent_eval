@@ -1,66 +1,78 @@
-# Sandbox design
+# Sandbox
 
-> Phase 1 §4.4 deliverable. Methodology context in [`methodology.md`](methodology.md) §6.
+Methodology context in [methodology.md](methodology.md) §6.
 
 ## 1. Container spec
 
-Every (task, seed) pair runs in a fresh Docker container, never reused.
+Every (task, seed) attempt runs in a fresh Docker container, never reused.
 
-| Constraint | Value | Override |
-|---|---|---|
-| Base image | `python:3.11-slim` pinned by SHA in run metadata | image SHA bump = new entry hash |
-| CPU | 1 core (`--cpus=1.0`) | not overridable per-task |
-| Memory | 2 GB (`--memory=2g`) | not overridable per-task |
-| Wall-time | task's `time_budget_s` (≤300 in v1) | task spec controls |
-| Network | disabled (`--network=none`) | task `network: true` opt-in |
-| Host FS | none mounted outside `/work` | not overridable |
-| Skill bundle | injected read-only at `/root/.claude/skills/` | not overridable |
-| User | non-root (`agenteval` user, UID 1000) | not overridable |
-| Writable dirs | `/work` (task working dir), `/tmp` (cleared on exit) | not overridable |
+| Constraint | Value |
+|---|---|
+| Base image | `python:3.11-bookworm-slim`, SHA pinned in `sandbox/image.lock` |
+| CPU | 1 core (`--cpus=1.0`) |
+| Memory | 2 GB (`--memory=2g`) |
+| Wall-time | task's `time_budget_s` (<=300 in v1) |
+| Network | disabled (`--network=none`); task `network: true` opt-in |
+| Host FS | nothing mounted outside `/work` |
+| User | non-root (`agenteval`, UID 1000) |
+| Skills | injected at `/home/agenteval/.claude/skills/` |
+| Writable | `/work`, `/tmp` (both discarded on teardown) |
 
 ## 2. Lifecycle
 
-1. **Pull/verify base image** at the pinned SHA. If unavailable, raise `SandboxError`.
-2. **Compose the container layer**: copy task's `setup.files` into `/work`; run pinned `pip_install`; mount skill bundle read-only at `/root/.claude/skills/`.
-3. **Start agent execution.** The harness sends API requests on the host; the agent's tool calls run as subprocesses inside the container via the runner's tool-handling layer.
-4. **Capture trajectory + final state.** Trajectory is written to `/work/.trajectory.jsonl` and copied out.
-5. **Grader runs** in a *separate* container (the "grader sandbox") with `/work` mounted read-only. Grader has 30 s wall-time, no network.
-6. **Teardown.** Both containers destroyed. `/work` discarded.
+1. Pull/verify the base image at the pinned SHA. Raise `SandboxError` if
+   unavailable.
+2. Materialise `setup.files` into `/work`; run pinned `pip_install`; inject
+   the skill bundle at `/home/agenteval/.claude/skills/`.
+3. Drive the agent loop. Tool calls run as subprocesses inside the
+   container via the runner's tool-dispatch layer.
+4. Capture trajectory + final state.
+5. Grader runs in a separate sandbox with `/work` mounted read-only;
+   30-second wall-time; no network.
+6. Teardown: both containers destroyed; `/work` discarded.
 
 ## 3. Threat model
 
-We assume:
-- Skill authors are **not actively malicious**. We defend against accidental side effects (a skill that types `rm -rf` on a typo, a skill that tries to make HTTP calls).
-- Graders are **trusted code** maintained by the project and reviewed in PR.
-- Agent-produced code is **untrusted**. It runs in the sandbox; the sandbox is a soft boundary.
+Assumed: skill authors are not actively malicious; the defence is against
+accidental side effects (a typo running `rm -rf`, a skill trying to make
+HTTP calls). Graders are trusted code, reviewed in PR. Agent-produced code
+is untrusted; the sandbox is a soft boundary.
 
-We do **not** defend against:
-- Deliberate sandbox escape (Docker breakout, kernel exploit).
-- Adversarial graders (graders are code we review and own).
-- Denial-of-service via resource starvation if the host is shared. Run on dedicated infra.
+Not defended against:
 
-This positioning is documented in [`methodology.md`](methodology.md) §6.2.
+- Deliberate sandbox escape (kernel exploit, Docker breakout).
+- Adversarial graders.
+- Denial-of-service via host-shared resource starvation. Run on dedicated
+  infra.
 
-## 4. Cross-platform notes
+## 4. Cross-platform
 
 | Platform | Status | Notes |
 |---|---|---|
-| Linux (x86_64) | Supported, recommended | Used by CI verifier. |
-| Linux (arm64) | Supported | Pinned image must have an arm64 variant; verifier currently uses x86_64. |
-| macOS (Docker Desktop) | Supported with caveats | Slower filesystem; harness warns at >20 tasks; remote-runner suggested. |
-| Windows (WSL2 + Docker Desktop) | Supported with caveats | Same caveats as macOS. |
-| Remote runner | Supported | `agenteval eval --remote <ssh-host>` ships the bundle + task set over SSH; results streamed back. |
+| Linux x86_64 | Supported; CI uses this. | |
+| Linux arm64 | Supported; the pinned image must have an arm64 variant. | |
+| macOS (Docker Desktop) | Caveat: slower filesystem. Warning above 20 tasks. | |
+| Windows (WSL2 + Docker Desktop) | Same caveats as macOS. | |
+| Remote runner | `agenteval eval --remote <ssh-host>` ships bundle + task set over SSH. | |
 
-## 5. Pinned image SHA management
+## 5. Image SHA pinning
 
-A `sandbox/image.lock` file in the repo records the pinned base-image SHA. Updates happen via:
+`sandbox/image.lock` records the base-image SHA. Bumps go via:
 
-1. New image SHA selected (typically a security update of `python:3.11-slim`).
-2. Re-run all existing leaderboard entries on the new image to verify no behavioural drift.
-3. If drift > tolerance, do NOT promote the new image; investigate.
-4. If no drift, update `sandbox/image.lock` and bump the build-tooling version.
+1. New SHA selected (typically a base-image security update).
+2. Re-run existing leaderboard entries on the new image to detect
+   behavioural drift.
+3. If drift exceeds tolerance, don't promote; investigate.
+4. Otherwise commit the new SHA. Re-verified entries that ran under the
+   previous SHA fire `sandbox-drift` until they're re-verified against the
+   new one.
 
-## 6. Implementation references
+Use `scripts/pin_image_sha.sh` to resolve the current tag to a digest and
+write it into the lock file.
 
-- Code: `src/agenteval/sandbox/docker.py` (container lifecycle), `src/agenteval/sandbox/timeout.py` (wall-time enforcement).
-- Phase 2 M2 implements this; tests live in `tests/test_sandbox.py` and include OOM-injection, time-out-injection, and network-leak detection.
+## 6. Implementation
+
+- `src/agenteval/sandbox/docker.py` for container lifecycle.
+- `src/agenteval/sandbox/local.py` for the no-isolation dev fallback.
+- Tests in `tests/test_sandbox_docker.py` (skipped when the Docker daemon
+  is unreachable).

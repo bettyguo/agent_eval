@@ -1,18 +1,13 @@
-"""Hardened Docker sandbox (M2).
+"""Hardened Docker sandbox.
 
-Implements `docs/sandbox.md` §1 modulo the SHA-pinning (M5 hardening). Each
-(task, seed) attempt gets a fresh container with the constraints:
-
-- Pinned image tag (`agenteval-sandbox:base`, built from sandbox/Dockerfile.base).
-- 1 CPU, 2 GB RAM, 5-min wall-time default.
-- Network disabled by default; task spec may opt in via `network: true`.
-- No host filesystem mount outside the per-attempt working directory.
-- Skill bundle injected at `~/.claude/skills/` (and shadow-copied to
-  `workdir/.claude/skills/` so the agent's relative-path tools also find it).
+Per `docs/sandbox.md` §1. Each (task, seed) attempt gets a fresh container:
+pinned image tag, 1 CPU, 2 GB RAM, 5-min wall-time, `--network=none` by
+default, no host mount outside the per-attempt working directory, non-root
+user, skill bundle injected at `~/.claude/skills/`.
 
 Tool dispatch:
-- File operations (`read_file`, `write_file`, `edit_file`, `glob`, `grep`) work
-  on the host-side workdir bind-mount; this is the fastest correct option.
+- File operations (`read_file`, `write_file`, `edit_file`, `glob`, `grep`)
+  work on the host-side workdir bind-mount.
 - `execute_bash` is `docker exec` into the running container.
 """
 
@@ -79,8 +74,8 @@ class DockerSandbox(Sandbox):
             for relpath, content in files.items():
                 self._write_host_file(relpath, content)
 
-            # 2. Shadow-copy the skill bundle to workdir/.claude/skills/ so the
-            #    agent's relative-path tools also find it (M2 belt-and-braces).
+            # Shadow-copy the skill bundle to workdir/.claude/skills/ so the
+            # agent's relative-path tools also find it.
             self._materialize_skill_bundle_in_workdir(skill_bundle)
 
             # 3. Launch the container with mounts + resource limits.

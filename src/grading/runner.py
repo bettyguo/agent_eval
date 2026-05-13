@@ -123,11 +123,11 @@ def _coerce(raw: Any, task_id: str) -> GraderResult:
 
 
 class _Timeout:
-    """Cross-platform-ish timeout. Uses SIGALRM on POSIX; no-op on Windows.
+    """SIGALRM-based timeout on POSIX; no-op on Windows.
 
-    On Windows, the harness's outer sandbox wall-time enforcement remains the
-    primary boundary; the grader's own 30-s budget is a courtesy ceiling. A
-    real subprocess sandbox in M2 enforces it strictly.
+    The Docker sandbox enforces wall-time strictly at the container level.
+    This grader-side timer is a courtesy ceiling for the in-process grader
+    body.
     """
 
     def __init__(self, seconds: int, task_id: str) -> None:

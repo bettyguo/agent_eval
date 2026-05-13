@@ -1,16 +1,14 @@
 """AnthropicRunner: drives the agent loop against Anthropic's Messages API.
 
-Uses the `anthropic` SDK's tool-use protocol. System prompt is assembled by
-concatenating skill bundle bodies (M1 minimal injection; M2 will use the
-proper `~/.claude/skills/` directory layout in the Docker sandbox).
+Uses the `anthropic` SDK's tool-use protocol. The system prompt is assembled
+by concatenating skill bundle bodies; the DockerSandbox also injects the
+bundle at `~/.claude/skills/` so tool-based discovery works.
 """
 
 from __future__ import annotations
 
 import time
-from typing import Any
-
-from typing import cast
+from typing import Any, cast
 
 from agenteval.errors import RunnerError
 from agenteval.grading.types import FinalState, TrajectoryStep, TrajectoryTool

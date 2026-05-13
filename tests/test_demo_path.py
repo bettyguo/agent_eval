@@ -1,11 +1,8 @@
-"""Smoke test: end-to-end harness wiring with the MockRunner.
+"""End-to-end harness wiring smoke test.
 
-This is the M1 DoD check: the harness can take a SkillBundle.empty() + the
-skill-specific-v1 task set + a runner, run through every (task, seed) attempt,
-collect grader results, and produce a Result.
-
-Uses MockRunner so the test does not consume API credits and runs in CI.
-The real-API smoke test lives outside CI; see scripts/smoke_test.md.
+Uses MockRunner so the test doesn't consume API credits and runs in CI.
+Exercises the full SkillBundle.empty() -> TaskSet -> Harness path and the
+eligibility logic for canonical / non-canonical / temperature-perturbed runs.
 """
 
 from __future__ import annotations

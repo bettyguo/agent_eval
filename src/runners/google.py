@@ -1,8 +1,8 @@
 """GoogleRunner: drives the agent loop against Gemini's function-calling API.
 
 Uses `google-genai` (>= 0.3). Skill bundles are injected via the system
-instruction parameter; Gemini has no native skills feature (ADR-0004,
-docs/methodology.md §2.4).
+instruction parameter. Gemini has no native skills feature; cross-provider
+numbers are deltas-from-baseline, not absolutes.
 """
 
 from __future__ import annotations

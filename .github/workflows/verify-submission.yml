@@ -1,10 +1,9 @@
 name: Verify submission
 
-# Triggered on PRs that add or modify entries under frontend/data/submissions/.
-# Per anti-pattern #10 of the master prompt and ADR-0008, every leaderboard
-# entry is verified by running the harness in TWO different cloud zones.
-# This workflow runs verifier-A; verifier-B runs out-of-band on a Hetzner VPS
-# (configured separately) and posts its report as a check.
+# Re-runs every submitted leaderboard entry from scratch and compares
+# structured features. Verifier-A here on GitHub Actions; verifier-B runs
+# out of band on a Hetzner VPS and posts back as a separate check. Both
+# must agree before an entry is marked verified.
 
 on:
   pull_request:

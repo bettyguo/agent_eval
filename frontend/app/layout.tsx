@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "agenteval — the reproducible benchmark for Claude Code skills",
   description:
-    "Do Claude Code skills actually work? agenteval is the first reproducible benchmark.",
+    "A reproducible benchmark for Claude Code skill bundles.",
 };
 
 export default function RootLayout({

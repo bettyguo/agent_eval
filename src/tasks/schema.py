@@ -41,7 +41,7 @@ class Setup(_Strict):
 
 
 class Grader(_Strict):
-    """Deterministic Python grader. ADR-0006 forbids LLM-as-judge in v1."""
+    """Deterministic Python grader. LLM-as-judge is disallowed in v1."""
 
     type: GraderType
     script: str
@@ -50,7 +50,6 @@ class Grader(_Strict):
     @classmethod
     def _no_llm_imports(cls, v: str) -> str:
         for forbidden in _FORBIDDEN_GRADER_IMPORTS:
-            # Match `import X` or `from X import` (also `import X.Y`)
             patterns = [
                 rf"^\s*import\s+{re.escape(forbidden)}\b",
                 rf"^\s*from\s+{re.escape(forbidden)}\b",
@@ -58,7 +57,7 @@ class Grader(_Strict):
             for pat in patterns:
                 if re.search(pat, v, re.MULTILINE):
                     raise ValueError(
-                        f"grader scripts may not import {forbidden!r} (ADR-0006: no LLM-as-judge in v1)"
+                        f"grader scripts may not import {forbidden!r} (no LLM-as-judge in v1)"
                     )
         return v
 
