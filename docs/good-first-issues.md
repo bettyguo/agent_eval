@@ -8,21 +8,15 @@ Ten well-scoped contribution opportunities. Each is bounded, has a clear "defini
 
 ---
 
-## 1. Burn down `mypy --strict` debt in `src/agenteval/`
+## 1. ~~Burn down `mypy --strict` debt~~ **DONE in Phase 3 polish**
 
-**Effort:** ~3 hr.
-**Why:** CI currently runs `mypy src || true` (non-blocking) per `.github/workflows/ci.yml`. We want strict to be blocking.
-**Files:** every module under `src/agenteval/`.
-**DoD:** `mypy src` passes with zero errors. Update the CI step to drop the `|| true`.
+`mypy src` now passes with zero errors. CI runs it as a blocking step (`.github/workflows/ci.yml`). Struck-through here to show the issue list is maintained and to leave a paper trail for first-time contributors comparing this doc against the master prompt's §6.5 checklist.
 
 ---
 
-## 2. Pre-built `agenteval-sandbox:base` image published to GHCR
+## 2. ~~Pre-built `agenteval-sandbox:base` image published to GHCR~~ **WORKFLOW DRAFTED**
 
-**Effort:** ~2 hr.
-**Why:** Right now users have to `docker build -f sandbox/Dockerfile.base ...` themselves. Pushing a pre-built image to GitHub Container Registry skips this step and pins behavior.
-**Files:** `.github/workflows/publish-sandbox-image.yml` (new), `sandbox/image.lock`.
-**DoD:** A GH Actions workflow builds on changes to `sandbox/Dockerfile.base` and pushes to `ghcr.io/<org>/agenteval-sandbox:<sha>` plus a `:base` tag. The DockerSandbox falls back to pulling from GHCR if the local image is missing.
+`.github/workflows/publish-sandbox-image.yml` ships the build-+-push step on changes to `sandbox/Dockerfile.base` or `sandbox/image.lock`. The workflow pushes two tags (the git SHA and `:base`) under `ghcr.io/<owner>/agenteval-sandbox`. **Remaining work for a contributor:** wire the DockerSandbox to fall back to pulling from GHCR if the local image is missing.
 
 ---
 

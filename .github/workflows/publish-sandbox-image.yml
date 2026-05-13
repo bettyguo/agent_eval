@@ -1,0 +1,65 @@
+name: Publish sandbox image
+
+# Builds + publishes the agenteval-sandbox base image to GHCR on changes to
+# sandbox/Dockerfile.base or sandbox/image.lock. Tags with both the git SHA
+# and `:base` (rolling latest).
+#
+# Per ADR-0017, sandbox_image_sha is stored on each leaderboard entry but
+# NOT part of entry_hash; mismatch on re-verification fires the
+# `sandbox-drift` flag rather than rejecting the entry. This workflow does
+# NOT auto-update sandbox/image.lock — maintainers run scripts/pin_image_sha.sh
+# locally and commit the digest with their bump.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sandbox/Dockerfile.base"
+      - "sandbox/image.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build + push agenteval-sandbox:base
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase repo owner
+        id: repo
+        run: echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build + push image
+        uses: docker/build-push-action@v6
+        with:
+          context: sandbox
+          file: sandbox/Dockerfile.base
+          push: true
+          # Two tags: a content-addressed one (the build commit's SHA) for
+          # immutable reference, and `:base` as the rolling alias.
+          tags: |
+            ghcr.io/${{ steps.repo.outputs.owner_lc }}/agenteval-sandbox:base
+            ghcr.io/${{ steps.repo.outputs.owner_lc }}/agenteval-sandbox:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - name: Report pushed digest
+        run: |
+          echo "::notice::Image pushed to ghcr.io/${{ steps.repo.outputs.owner_lc }}/agenteval-sandbox"
+          echo "Run scripts/pin_image_sha.sh locally against the new image to update sandbox/image.lock."
