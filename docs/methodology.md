@@ -2,7 +2,11 @@
 
 > The defense-against-reviewers document. Every measurement choice in `agenteval` is justified here, with awareness of how a NeurIPS reviewer or a skill author may challenge it. If a claim in this document is wrong, the project's credibility is compromised — please open an issue.
 
-**Document status:** v0.1 draft, Phase 0. Pending review by ≥2 IR/ML PhDs before launch (per master prompt §1 quality bar). Not yet exhaustive on adversarial analysis (full treatment in [`adversarial.md`](adversarial.md)) or reproducibility (see [`reproducibility.md`](reproducibility.md)).
+**Document status:** v1.0 (post-Phase-3 polish). Workshop-paper backbone. Pending review by ≥2 IR/ML PhDs before launch (per master prompt §1 quality bar). Adversarial-test plans live in [`adversarial.md`](adversarial.md); reproducibility protocol in [`reproducibility.md`](reproducibility.md); the FAQ at [`faq.md`](faq.md) pre-drafts responses to common criticisms.
+
+## Abstract
+
+The Claude Code Skills ecosystem grew explosively through 2025–2026 — `mattpocock/skills`, `obra/superpowers`, `andrej-karpathy-skills` each carrying tens of thousands of GitHub stars — alongside anecdotal claims about reliability gains that lack defined task populations, control conditions, confidence intervals, or reproducibility metadata. `agenteval` is the first reproducible benchmark for `.claude/skills/` directories and `CLAUDE.md` configurations. It evaluates skill bundles on a fixed 100-task budget across Anthropic, OpenAI, and Google in a hardened Docker sandbox, reports the Chen-2021 unbiased pass@k estimator alongside TAU-Bench-style pass^k reliability, and content-addresses every leaderboard entry so any third party can re-verify the result. We refuse three things in v1 that the broader eval literature is converging on: (1) LLM-as-judge grading, (2) a scalar leaderboard rank, and (3) absolute capability claims on contaminated benchmarks. The first preserves determinism; the second is a structural Goodhart's-Law defense; the third drives our two-panel leaderboard architecture (primary = uncontaminated skill-specific + TAU-Bench; secondary = SWE-bench-Lite, marked "informative but contaminated"). This document is the workshop-paper backbone; the full v1 implementation is open-source at the project repository under Apache-2.0.
 
 ---
 
