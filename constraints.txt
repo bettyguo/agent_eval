@@ -8,7 +8,7 @@
 # Runtime
 anthropic<1.0
 openai<3.0
-google-genai<1.0
+google-genai<3.0
 pydantic>=2.6,<3.0
 pyyaml<7.0
 click<9.0
