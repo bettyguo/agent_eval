@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Testing / coverage
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+htmlcov/
+coverage.xml
+*.cover
+
+# Type checking
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Project-specific
+*.duckdb
+*.duckdb.wal
+results/
+runs/
+.agenteval-cache/
+
+# Node / frontend
+node_modules/
+.next/
+out/
+.vercel/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secrets / env
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Docker
+.docker/
+
+# OS
+*~
+.fuse_hidden*

@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agenteval"
+version = "0.0.1"
+description = "Reproducible benchmark for Claude Code Skills and CLAUDE.md configurations"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [{ name = "agenteval contributors" }]
+keywords = ["claude", "skills", "benchmark", "agent", "eval", "llm"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# Runtime deps accrete by milestone.
+# M1: pydantic, pyyaml, click, rich, anthropic.
+# M2: docker (hardened sandbox).
+# M3: openai, google-genai, numpy (bootstrap CI).
+# M4–M6 will add: duckdb, jinja2 (leaderboard export).
+dependencies = [
+  "pydantic>=2.6",
+  "pyyaml>=6.0",
+  "click>=8.1",
+  "rich>=13.7",
+  "anthropic>=0.40",
+  "docker>=7.0",
+  "openai>=1.40",
+  "google-genai>=0.3",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-cov",
+  "ruff>=0.4",
+  "mypy>=1.10",
+  "pre-commit>=3.7",
+]
+
+[project.scripts]
+agenteval = "agenteval.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/agenteval/agenteval"
+Issues = "https://github.com/agenteval/agenteval/issues"
+Documentation = "https://github.com/agenteval/agenteval/tree/main/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agenteval"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W", "N"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
