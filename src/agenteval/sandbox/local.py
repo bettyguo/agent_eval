@@ -1,9 +1,9 @@
 """Local subprocess sandbox.
 
-M1 implementation: spins up a temp directory, materializes task files there,
-runs Bash commands via subprocess with cwd=workdir. NO isolation — agent code
-runs on the host. Documented as **dev-only**; production path is the
-DockerSandbox landing in M2.
+Spins up a temp directory, materialises task files there, runs Bash commands
+via subprocess with cwd=workdir. NO isolation; agent code runs on the host.
+This is the dev-only fallback when Docker is unavailable; the production
+path is the DockerSandbox.
 """
 
 from __future__ import annotations
@@ -42,9 +42,10 @@ class LocalSubprocessSandbox(Sandbox):
             for relpath, content in files.items():
                 self._write_file_internal(relpath, content)
 
-            # Inject the skill bundle at workdir/.claude/skills/<skill>/SKILL.md.
-            # Real per-user-home injection (~/.claude/skills/) is M2's concern; M1
-            # just makes the bundle reachable.
+            # Make the skill bundle reachable at workdir/.claude/skills/.
+            # DockerSandbox also injects at ~/.claude/skills/ inside the
+            # container, mirroring real Claude Code; this fallback just makes
+            # the files reachable via the workdir.
             if skill_bundle.skills:
                 skills_root = self._root / ".claude" / "skills"
                 skills_root.mkdir(parents=True, exist_ok=True)
@@ -54,13 +55,9 @@ class LocalSubprocessSandbox(Sandbox):
                     md = f"---\nname: {skill.name}\ndescription: {skill.description}\n---\n{skill.body}"
                     (skill_dir / "SKILL.md").write_text(md, encoding="utf-8")
 
-            # pip_install is a no-op in M1 LocalSandbox (relies on host venv).
-            # Phase 2 M2's DockerSandbox does real `pip install` inside the container.
-            if pip_install:
-                # Record what was requested for the trajectory; surface a warning.
-                self._pip_install_requested = list(pip_install)
-            else:
-                self._pip_install_requested = []
+            # pip_install is a no-op here (we rely on the host venv).
+            # DockerSandbox actually pip-installs into the container.
+            self._pip_install_requested = list(pip_install) if pip_install else []
         except Exception:
             self.teardown()
             raise
@@ -90,8 +87,16 @@ class LocalSubprocessSandbox(Sandbox):
         except subprocess.TimeoutExpired as exc:
             stdout_b = exc.stdout
             stderr_b = exc.stderr
-            stdout = stdout_b if isinstance(stdout_b, str) else (stdout_b.decode("utf-8", errors="replace") if stdout_b else "")
-            stderr = stderr_b if isinstance(stderr_b, str) else (stderr_b.decode("utf-8", errors="replace") if stderr_b else "")
+            stdout = (
+                stdout_b
+                if isinstance(stdout_b, str)
+                else (stdout_b.decode("utf-8", errors="replace") if stdout_b else "")
+            )
+            stderr = (
+                stderr_b
+                if isinstance(stderr_b, str)
+                else (stderr_b.decode("utf-8", errors="replace") if stderr_b else "")
+            )
             return {
                 "exit_code": 124,
                 "stdout": stdout,

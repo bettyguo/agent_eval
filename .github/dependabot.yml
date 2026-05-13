@@ -7,8 +7,7 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     labels: ["dependencies", "python"]
-    # Anthropic / OpenAI / google-genai SDK updates can affect runner semantics —
-    # do not auto-merge; pair with a manual smoke run.
+    # Provider SDK major bumps can change runner semantics; don't auto-merge.
     ignore:
       - dependency-name: anthropic
         update-types: [version-update:semver-major]
@@ -36,6 +35,5 @@ updates:
     schedule:
       interval: weekly
     labels: ["dependencies", "sandbox"]
-    # Base image bumps require re-running every leaderboard entry through the
-    # verifier (see ADR-0017 stored-but-not-hashed sandbox_image_sha). Don't
-    # auto-merge.
+    # Base image bumps require running every leaderboard entry through the
+    # verifier afterward; don't auto-merge.

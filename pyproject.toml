@@ -21,11 +21,6 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-# Runtime deps accrete by milestone.
-# M1: pydantic, pyyaml, click, rich, anthropic.
-# M2: docker (hardened sandbox).
-# M3: openai, google-genai, numpy (bootstrap CI).
-# M4–M6 will add: duckdb, jinja2 (leaderboard export).
 dependencies = [
   "pydantic>=2.6",
   "pyyaml>=6.0",

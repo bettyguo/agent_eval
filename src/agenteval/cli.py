@@ -1,8 +1,4 @@
-"""agenteval CLI (DESIGN.md §1.3).
-
-M1 implements `eval`, `dry-run`, `inspect`, `version`. `submit`, `verify`,
-`leaderboard` arrive in M5/M6.
-"""
+"""agenteval CLI."""
 
 from __future__ import annotations
 
@@ -102,7 +98,7 @@ def version() -> None:
     "--remote",
     type=str,
     default=None,
-    help="SSH host (user@host or host) to run the eval on remotely. See docs/remote-runner.md.",
+    help="SSH host (user@host or host) to run the eval on remotely.",
 )
 def eval_cmd(
     skills: str,

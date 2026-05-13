@@ -1,8 +1,8 @@
 """Static JSON export for the leaderboard frontend.
 
 Reads leaderboard-entry JSONs from a directory and produces a single
-`leaderboard.json` consumed by the Next.js frontend (M6). DuckDB-backed
-storage lands in a later milestone; M6 ships the simpler PR-driven flow.
+`leaderboard.json` consumed by the Next.js frontend. DuckDB-backed storage
+is on the roadmap; for now this is a straight PR-driven flow.
 """
 
 from __future__ import annotations

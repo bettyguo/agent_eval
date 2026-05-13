@@ -1,5 +1,5 @@
 # agenteval pricing table.
-# Hashed (ADR-0013) and pinned in every leaderboard entry's entry_hash.
+# Hashed into every leaderboard entry's entry_hash.
 # Update `last_audited` whenever you reconcile this against provider pricing.
 # Prices are in USD per million tokens (M = 1_000_000).
 #

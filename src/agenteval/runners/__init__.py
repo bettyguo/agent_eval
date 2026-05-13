@@ -2,9 +2,7 @@
 
 The runner is the agent-loop driver: it sends the task prompt + tool
 definitions to the model provider, dispatches tool calls to the Sandbox,
-collects the trajectory, and returns a `RunOutcome`. M1 ships
-`AnthropicRunner` and `MockRunner`; `OpenAIRunner` and `GoogleRunner` land in
-M3.
+collects the trajectory, and returns a `RunOutcome`.
 """
 
 from agenteval.runners.anthropic import AnthropicRunner

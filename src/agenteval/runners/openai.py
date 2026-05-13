@@ -1,8 +1,8 @@
 """OpenAIRunner: drives the agent loop against OpenAI's chat-completions tool-use API.
 
-Skill bundles are injected via the system prompt; OpenAI has no native
-"skills" feature, so this is the agreed-upon emulation protocol per ADR-0004
-and `docs/methodology.md` §2.4.
+Skill bundles are injected via the system prompt. OpenAI has no native
+skills feature, so this is the emulation protocol; cross-provider numbers
+are documented as deltas-from-baseline, not absolutes.
 """
 
 from __future__ import annotations

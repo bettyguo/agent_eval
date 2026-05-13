@@ -1,9 +1,9 @@
 """Sandbox layer.
 
-M1 shipped `LocalSubprocessSandbox` (dev-only). M2 adds the hardened
-`DockerSandbox` per `docs/sandbox.md`. The factory `default_sandbox_factory()`
-selects via the `AGENTEVAL_SANDBOX` env var (default: `docker` when the daemon
-is reachable; falls back to `local` with a warning otherwise).
+Two backends: `LocalSubprocessSandbox` (dev-only, no isolation) and
+`DockerSandbox` (the production path; see `docs/sandbox.md`).
+`default_sandbox_factory()` picks via the `AGENTEVAL_SANDBOX` env var,
+defaulting to docker when the daemon is reachable.
 """
 
 from __future__ import annotations

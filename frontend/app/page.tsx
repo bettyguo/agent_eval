@@ -10,7 +10,7 @@ export default function HomePage() {
           Do Claude Code skills actually work?
         </h1>
         <p className="text-neutral-400 max-w-2xl">
-          The first reproducible benchmark for{" "}
+          A reproducible benchmark for{" "}
           <code>.claude/skills/</code> directories and{" "}
           <code>CLAUDE.md</code> configurations. Every leaderboard entry is
           content-addressed and re-verified in two clean VMs before being

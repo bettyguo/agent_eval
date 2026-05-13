@@ -1,4 +1,4 @@
-"""Cost metric + pricing.yaml loader (docs/metrics.md §1.2, ADR-0013)."""
+"""Cost metric + pricing.yaml loader."""
 
 from __future__ import annotations
 

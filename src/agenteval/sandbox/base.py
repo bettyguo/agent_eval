@@ -1,8 +1,8 @@
 """Sandbox abstract base.
 
-The agent's tool calls (Bash, Read, Write, Edit, Glob, Grep) are dispatched to
-a `Sandbox` instance. M1 = `LocalSubprocessSandbox` (no isolation, dev only).
-M2 = `DockerSandbox` (hardened per `docs/sandbox.md`).
+The agent's tool calls (Bash, Read, Write, Edit, Glob, Grep) are dispatched
+to a `Sandbox` instance. `LocalSubprocessSandbox` is the dev-only fallback;
+`DockerSandbox` is the production path (see `docs/sandbox.md`).
 """
 
 from __future__ import annotations
