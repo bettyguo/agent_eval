@@ -1,4 +1,4 @@
-# agenteval
+# agent_eval
 
 A reproducible benchmark for Claude Code skill bundles (`.claude/skills/`
 directories) and `CLAUDE.md` configurations. Runs a fixed task set against
