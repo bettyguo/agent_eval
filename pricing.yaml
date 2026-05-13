@@ -1,0 +1,37 @@
+# agenteval pricing table.
+# Hashed (ADR-0013) and pinned in every leaderboard entry's entry_hash.
+# Update `last_audited` whenever you reconcile this against provider pricing.
+# Prices are in USD per million tokens (M = 1_000_000).
+#
+# Sources to keep current:
+#   - Anthropic: https://www.anthropic.com/pricing
+#   - OpenAI:    https://openai.com/api/pricing/
+#   - Google:    https://ai.google.dev/pricing
+
+last_audited: "2026-05-13"
+
+providers:
+  anthropic:
+    claude-opus-4-7:
+      input_per_mtok: 15.0
+      output_per_mtok: 75.0
+    claude-sonnet-4-6:
+      input_per_mtok: 3.0
+      output_per_mtok: 15.0
+    claude-haiku-4-5-20251001:
+      input_per_mtok: 1.0
+      output_per_mtok: 5.0
+  openai:
+    gpt-5.2:
+      input_per_mtok: 5.0
+      output_per_mtok: 20.0
+    gpt-4o:
+      input_per_mtok: 2.50
+      output_per_mtok: 10.0
+  google:
+    gemini-3-pro:
+      input_per_mtok: 3.50
+      output_per_mtok: 14.0
+    gemini-2.5-flash:
+      input_per_mtok: 0.10
+      output_per_mtok: 0.40
