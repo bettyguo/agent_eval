@@ -1,0 +1,64 @@
+name: Verify submission
+
+# Triggered on PRs that add or modify entries under frontend/data/submissions/.
+# Per anti-pattern #10 of the master prompt and ADR-0008, every leaderboard
+# entry is verified by running the harness in TWO different cloud zones.
+# This workflow runs verifier-A; verifier-B runs out-of-band on a Hetzner VPS
+# (configured separately) and posts its report as a check.
+
+on:
+  pull_request:
+    paths:
+      - "frontend/data/submissions/**/*.entry.json"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify-vm-a:
+    name: Verify submission (VM A - GitHub Actions)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install agenteval
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Identify changed entries
+        id: entries
+        run: |
+          changed=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD \
+            -- 'frontend/data/submissions/**/*.entry.json' || true)
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$changed" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Verify each entry
+        if: steps.entries.outputs.files != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          set -e
+          echo "${{ steps.entries.outputs.files }}" | while IFS= read -r entry; do
+            [ -z "$entry" ] && continue
+            echo "::group::Verifying $entry"
+            # The submitter encodes which task set + skill bundle the entry
+            # references. The harness loads those by hash and re-runs.
+            agenteval verify "$entry" \
+              --skills none \
+              --tasks skill-specific-v1
+            echo "::endgroup::"
+          done

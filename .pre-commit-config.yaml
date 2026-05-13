@@ -1,0 +1,29 @@
+# Pre-commit hooks. Install with `pre-commit install` after cloning.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: ^tasks/skill-specific-v1/.*\.yaml$    # task YAMLs contain multi-doc grader scripts; the parser would false-positive
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: forbid-llm-import-in-graders
+        name: "graders cannot import LLM SDKs (ADR-0006)"
+        entry: bash -c 'for f in "$@"; do if grep -qE "^\s*(import|from)\s+(anthropic|openai|google\.(generativeai|genai))" "$f"; then echo "Forbidden LLM import in $f (ADR-0006: no LLM-as-judge in v1)"; exit 1; fi; done'
+        language: system
+        files: ^tasks/.*/.*\.yaml$
