@@ -1,0 +1,97 @@
+id: style-adherence-04
+category: style-adherence
+description: "TypeScript parseDuration: passes tsc --strict + eslint --max-warnings=0 + jest, no suppression markers."
+license: MIT
+prompt: |
+  Implement `parseDuration` in `src/parse-duration.ts` to convert strings like
+  '1h30m', '45s', '2d' into milliseconds. It must satisfy the existing tests,
+  pass `npx tsc --strict --noEmit`, and `npx eslint src/parse-duration.ts
+  --max-warnings=0`.
+setup:
+  files:
+    "package.json": |
+      {
+        "name": "parse-duration-task",
+        "version": "1.0.0",
+        "private": true,
+        "scripts": { "test": "jest" }
+      }
+    "tsconfig.json": |
+      {
+        "compilerOptions": {
+          "target": "ES2022",
+          "module": "commonjs",
+          "strict": true,
+          "esModuleInterop": true,
+          "noEmit": true
+        },
+        "include": ["src/**/*.ts"]
+      }
+    ".eslintrc.json": |
+      {
+        "parser": "@typescript-eslint/parser",
+        "plugins": ["@typescript-eslint"],
+        "extends": ["plugin:@typescript-eslint/recommended"]
+      }
+    "src/parse-duration.ts": "// implement parseDuration here\n"
+    "src/parse-duration.test.ts": |
+      import { parseDuration } from "./parse-duration";
+
+      test("seconds", () => {
+        expect(parseDuration("45s")).toBe(45_000);
+      });
+
+      test("hours and minutes", () => {
+        expect(parseDuration("1h30m")).toBe(5_400_000);
+      });
+
+      test("days", () => {
+        expect(parseDuration("2d")).toBe(172_800_000);
+      });
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import hashlib
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # Configs unchanged.
+        for cfg in ("tsconfig.json", ".eslintrc.json", "package.json"):
+            text = (wd / cfg).read_text(encoding="utf-8")
+            if cfg == "tsconfig.json" and '"strict": true' not in text:
+                return {"passed": False, "details": {"reason": "tsconfig.json strict weakened"}}
+            if cfg == ".eslintrc.json" and "@typescript-eslint" not in text:
+                return {"passed": False, "details": {"reason": ".eslintrc.json weakened"}}
+
+        # No suppression markers in the agent-authored file.
+        ts = wd / "src" / "parse-duration.ts"
+        if not no_suppressions(ts, forbidden=["@ts-ignore", "@ts-expect-error", "eslint-disable"]):
+            return {"passed": False, "details": {"reason": "parse-duration.ts uses suppression marker"}}
+
+        # tsc --strict --noEmit.
+        rc_tsc, out_tsc = run_command(
+            ["npx", "--yes", "tsc", "--strict", "--noEmit"], cwd=wd, timeout=120.0
+        )
+        if rc_tsc != 0:
+            return {"passed": False, "details": {"reason": "tsc failed", "out": out_tsc[-1500:]}}
+
+        # eslint --max-warnings=0.
+        rc_lint, out_lint = run_command(
+            ["npx", "--yes", "eslint", "src/parse-duration.ts", "--max-warnings=0"],
+            cwd=wd, timeout=120.0,
+        )
+        if rc_lint != 0:
+            return {"passed": False, "details": {"reason": "eslint failed", "out": out_lint[-1500:]}}
+
+        # jest.
+        rc_jest, out_jest = run_command(
+            ["npx", "--yes", "jest", "src/parse-duration.test.ts"], cwd=wd, timeout=120.0
+        )
+        if rc_jest != 0:
+            return {"passed": False, "details": {"reason": "jest failed", "out": out_jest[-1500:]}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 300
+expected_tokens: 6000
+network: false

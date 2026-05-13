@@ -1,0 +1,76 @@
+id: code-review-02
+category: code-review
+description: "Flag the mutable-default-argument pitfall in append_log(entry, log=[])."
+license: MIT
+prompt: |
+  Review `logger.py` and describe any bugs you find. Do not modify the file.
+setup:
+  files:
+    "logger.py": |
+      """Tiny logger module."""
+
+      def _normalise_level(level):
+          if isinstance(level, str):
+              return level.upper()
+          return "INFO"
+
+
+      def append_log(entry, log=[]):
+          """Append an entry to the running log."""
+          log.append(entry)
+          return log
+
+
+      def _format_entry(timestamp, level, message):
+          return f"[{timestamp}] {level}: {message}"
+
+
+      def _truncate(message, max_length=120):
+          if len(message) <= max_length:
+              return message
+          return message[: max_length - 1] + "…"
+
+
+      def filter_entries(entries, predicate):
+          return [e for e in entries if predicate(e)]
+
+
+      def summarise(entries):
+          buckets = {}
+          for e in entries:
+              buckets.setdefault(e.get("level", "INFO"), 0)
+              buckets[e["level"]] += 1
+          return buckets
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import hashlib
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # File must be unchanged.
+        post = (wd / "logger.py").read_bytes()
+        # The pre-state SHA is computed lazily; we compare against the original setup.files content.
+        # Cheaper: just check that `def append_log(entry, log=[])` is still present byte-for-byte.
+        if b"def append_log(entry, log=[])" not in post:
+            return {"passed": False, "details": {"reason": "logger.py was modified (signature changed)"}}
+
+        msg = final_state.assistant_final_message or ""
+        keyword_patterns = [
+            r"mutable\s+default",
+            r"default\s+argument",
+            r"shared\s+default",
+            r"\bB006\b",
+        ]
+        if not grep_final_message(msg, keyword_patterns):
+            return {"passed": False, "details": {"reason": "did not flag mutable-default-argument"}}
+
+        # Must reference the function or parameter by name.
+        if "append_log" not in msg.lower() and "log=" not in msg.lower() and " log " not in msg.lower():
+            return {"passed": False, "details": {"reason": "did not localise to append_log/log"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 120
+expected_tokens: 2500
+network: false

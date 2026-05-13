@@ -1,0 +1,94 @@
+id: multi-file-03
+category: multi-file
+description: "Remove deprecated format_currency_old from utils.py; migrate 3 callers to format_currency; tests pass."
+license: MIT
+prompt: |
+  Remove `format_currency_old` from `utils.py` and migrate the three call sites
+  in `invoices.py`, `receipts.py`, `summary.py` to use `format_currency` instead.
+  Use the default `locale='en_US'`. Tests must still pass. No reference to the
+  deprecated name may remain anywhere.
+setup:
+  files:
+    "utils.py": |
+      def format_currency_old(amount):
+          # DEPRECATED: use format_currency
+          return f"${amount:.2f}"
+
+
+      def format_currency(amount, locale='en_US'):
+          if locale == 'en_US':
+              return f"${amount:.2f}"
+          if locale == 'de_DE':
+              return f"{amount:.2f} €"
+          return str(amount)
+    "invoices.py": |
+      from utils import format_currency_old
+
+      def render_invoice(total):
+          return f"Total: {format_currency_old(total)}"
+    "receipts.py": |
+      from utils import format_currency_old
+
+      def render_receipt(total):
+          return format_currency_old(total)
+    "summary.py": |
+      from utils import format_currency_old
+
+      def render_summary(total):
+          return f"= {format_currency_old(total)}"
+    "test_migration.py": |
+      from invoices import render_invoice
+      from receipts import render_receipt
+      from summary import render_summary
+
+
+      def test_invoice():
+          assert "$10.00" in render_invoice(10)
+
+
+      def test_receipt():
+          assert render_receipt(7.5) == "$7.50"
+
+
+      def test_summary():
+          assert "$3.00" in render_summary(3.0)
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed", "out": out[-1500:]}}
+
+        utils_text = (wd / "utils.py").read_text(encoding="utf-8")
+        if "format_currency_old" in utils_text:
+            return {"passed": False, "details": {"reason": "format_currency_old still referenced in utils.py"}}
+
+        stale = grep_repo(wd, r"\bformat_currency_old\b")
+        if stale:
+            return {"passed": False, "details": {"reason": "stale references to format_currency_old", "stale": [(str(p), n, l) for (p, n, l) in stale[:10]]}}
+
+        for caller in ("invoices.py", "receipts.py", "summary.py"):
+            tree = ast.parse((wd / caller).read_text(encoding="utf-8"))
+            has_call = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    fn = node.func
+                    if isinstance(fn, ast.Name) and fn.id == "format_currency":
+                        has_call = True
+                    elif isinstance(fn, ast.Attribute) and fn.attr == "format_currency":
+                        has_call = True
+                if has_call:
+                    break
+            if not has_call:
+                return {"passed": False, "details": {"reason": f"{caller} does not call format_currency"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 240
+expected_tokens: 4000
+network: false

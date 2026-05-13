@@ -1,0 +1,104 @@
+id: multi-file-02
+category: multi-file
+description: "Extend producer/consumer with timestamp_ms field; update both ends consistently with a new round-trip test."
+license: MIT
+prompt: |
+  Extend the event schema in this codebase with a new field `timestamp_ms` (int,
+  Unix milliseconds). Update `producer.py` to emit it and `consumer.py` to read it
+  and use it (the consumer should print 'event at <timestamp_ms>'). All tests must
+  still pass; add at least one new test asserting the field round-trips.
+setup:
+  files:
+    "producer.py": |
+      def build_event(user_id, name):
+          return {"user_id": user_id, "event": name}
+    "consumer.py": |
+      def handle_event(data):
+          uid = data["user_id"]
+          name = data["event"]
+          print(f"received event {name!r} from user {uid}")
+          return uid, name
+    "bridge_test.py": |
+      from producer import build_event
+      from consumer import handle_event
+
+
+      def test_basic_round_trip(capsys):
+          ev = build_event(1, "login")
+          uid, name = handle_event(ev)
+          assert uid == 1
+          assert name == "login"
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed", "out": out[-1500:]}}
+
+        # Producer: Dict literal with Constant("timestamp_ms") key.
+        producer_tree = ast.parse((wd / "producer.py").read_text(encoding="utf-8"))
+        prod_ok = False
+        for node in ast.walk(producer_tree):
+            if isinstance(node, ast.Dict):
+                for k in node.keys:
+                    if isinstance(k, ast.Constant) and k.value == "timestamp_ms":
+                        prod_ok = True
+                        break
+            if prod_ok:
+                break
+        if not prod_ok:
+            return {"passed": False, "details": {"reason": "producer.py missing dict key 'timestamp_ms'"}}
+
+        # Consumer: subscript with Constant("timestamp_ms") slice OR Attribute access.
+        consumer_tree = ast.parse((wd / "consumer.py").read_text(encoding="utf-8"))
+        cons_ok = False
+        for node in ast.walk(consumer_tree):
+            if isinstance(node, ast.Subscript):
+                slc = node.slice
+                if isinstance(slc, ast.Constant) and slc.value == "timestamp_ms":
+                    cons_ok = True
+                    break
+        if not cons_ok:
+            return {"passed": False, "details": {"reason": "consumer.py missing subscript on 'timestamp_ms'"}}
+
+        # Test file: at least one Assert referencing 'timestamp_ms' as a string literal.
+        bt_tree = ast.parse((wd / "bridge_test.py").read_text(encoding="utf-8"))
+        test_ok = False
+        for node in ast.walk(bt_tree):
+            if isinstance(node, ast.Assert):
+                for child in ast.walk(node):
+                    if isinstance(child, ast.Constant) and child.value == "timestamp_ms":
+                        test_ok = True
+                        break
+            if test_ok:
+                break
+        if not test_ok:
+            return {"passed": False, "details": {"reason": "bridge_test.py has no Assert mentioning 'timestamp_ms'"}}
+
+        # Hidden round-trip: call producer + consumer in a subprocess; expect 'event at ' in stdout.
+        probe = (
+            "import sys; sys.path.insert(0, '.');\n"
+            "from producer import build_event\n"
+            "from consumer import handle_event\n"
+            "ev = build_event(1, 'login')\n"
+            "ev.setdefault('timestamp_ms', 1700000000000)\n"
+            "handle_event(ev)\n"
+        )
+        rc_probe, out_probe = run_command(
+            ["python", "-c", probe], cwd=wd, timeout=15.0
+        )
+        if rc_probe != 0:
+            return {"passed": False, "details": {"reason": "hidden round-trip raised", "out": out_probe[-1500:]}}
+        if "event at " not in out_probe.lower():
+            return {"passed": False, "details": {"reason": "consumer did not print 'event at <ms>'"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 300
+expected_tokens: 4500
+network: false

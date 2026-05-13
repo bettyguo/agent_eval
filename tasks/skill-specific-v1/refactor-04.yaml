@@ -1,0 +1,116 @@
+id: refactor-04
+category: refactor
+description: "Replace send_notification's 7 positional params with a NotificationRequest dataclass; update 2 call-site files; tests pass."
+license: MIT
+prompt: |
+  Refactor `send_notification` in `notifications.py` to take a single
+  `NotificationRequest` dataclass instead of 7 positional parameters. Update all
+  call sites in `mailer.py` and `webhook.py`. The test file may be updated too if
+  necessary. All tests must still pass. The post-state `send_notification`
+  signature must have exactly one non-self parameter — no *args, no **kwargs.
+setup:
+  files:
+    "notifications.py": |
+      _SENT = []
+
+      def send_notification(recipient, channel, subject, body, priority, attempt, dry_run):
+          payload = {
+              "recipient": recipient,
+              "channel": channel,
+              "subject": subject,
+              "body": body,
+              "priority": priority,
+              "attempt": attempt,
+              "dry_run": dry_run,
+          }
+          if not dry_run:
+              _SENT.append(payload)
+          return payload
+
+
+      def sent():
+          return list(_SENT)
+
+
+      def reset():
+          _SENT.clear()
+    "mailer.py": |
+      from notifications import send_notification
+
+      def email_alert(addr, body):
+          return send_notification(addr, "email", "Alert", body, 1, 1, False)
+    "webhook.py": |
+      from notifications import send_notification
+
+      def webhook_alert(url, body):
+          return send_notification(url, "webhook", "Alert", body, 2, 1, False)
+    "test_notifications.py": |
+      from notifications import send_notification, reset
+
+
+      def setup_function():
+          reset()
+
+
+      def test_basic_payload():
+          p = send_notification("a@b.c", "email", "hi", "body", 1, 1, True)
+          assert p["recipient"] == "a@b.c"
+          assert p["dry_run"] is True
+
+
+      def test_via_mailer():
+          from mailer import email_alert
+          email_alert("x@y.z", "ping")
+
+
+      def test_via_webhook():
+          from webhook import webhook_alert
+          webhook_alert("https://example.com", "ping")
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed", "out": out[-1500:]}}
+
+        nt = ast.parse((wd / "notifications.py").read_text(encoding="utf-8"))
+
+        # NotificationRequest class exists.
+        cls_names = {n.name for n in ast.walk(nt) if isinstance(n, ast.ClassDef)}
+        if "NotificationRequest" not in cls_names:
+            return {"passed": False, "details": {"reason": "NotificationRequest class missing"}}
+
+        # send_notification has exactly 1 non-self parameter and no *args/**kwargs.
+        for n in ast.walk(nt):
+            if isinstance(n, ast.FunctionDef) and n.name == "send_notification":
+                args = n.args
+                positional = [a.arg for a in args.args if a.arg != "self"]
+                if len(positional) != 1:
+                    return {"passed": False, "details": {"reason": f"send_notification has {len(positional)} non-self positional params"}}
+                if args.vararg is not None or args.kwarg is not None:
+                    return {"passed": False, "details": {"reason": "send_notification still uses *args/**kwargs"}}
+                break
+        else:
+            return {"passed": False, "details": {"reason": "send_notification function missing"}}
+
+        # mailer.py and webhook.py call send_notification with at most 1 positional + at most 1 keyword.
+        for caller in ("mailer.py", "webhook.py"):
+            tree = ast.parse((wd / caller).read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call) and (
+                    (isinstance(node.func, ast.Name) and node.func.id == "send_notification")
+                    or (isinstance(node.func, ast.Attribute) and node.func.attr == "send_notification")
+                ):
+                    if len(node.args) > 1:
+                        return {"passed": False, "details": {"reason": f"{caller} still has multi-arg send_notification call"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 300
+expected_tokens: 5500
+network: false

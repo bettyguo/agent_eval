@@ -1,0 +1,94 @@
+id: multi-file-04
+category: multi-file
+description: "Change get_values to return tuple[int, ...]; update consumers + tests; pytest + mypy --strict both pass."
+license: MIT
+prompt: |
+  Change `get_values` in `core.py` to return `tuple[int, ...]` instead of
+  `list[int]`. Update all consumers (`analytics.py`, `export.py`, `cache.py`) and
+  their tests so that `pytest` passes and `mypy --strict .` reports zero errors.
+  Consumers must not use `.append` or `.extend` on the result.
+setup:
+  files:
+    "core.py": |
+      def get_values() -> list[int]:
+          return [1, 2, 3]
+    "analytics.py": |
+      from core import get_values
+
+      def summarise() -> int:
+          vals = get_values()
+          vals.append(0)  # to be removed in migration
+          return sum(vals)
+    "export.py": |
+      from core import get_values
+
+      def total() -> int:
+          values = get_values()
+          values.extend([0])  # to be removed
+          return sum(values)
+    "cache.py": |
+      from core import get_values
+
+      def snapshot() -> list[int]:
+          values = get_values()
+          values.append(99)  # to be removed
+          return values
+    "tests/__init__.py": ""
+    "tests/test_consumers.py": |
+      from analytics import summarise
+      from export import total
+      from cache import snapshot
+
+
+      def test_summarise():
+          assert summarise() == 6
+
+
+      def test_total():
+          assert total() == 6
+
+
+      def test_snapshot_len():
+          assert len(snapshot()) == 3
+    "mypy.ini": |
+      [mypy]
+      python_version = 3.11
+      strict = True
+    "pytest.ini": "[pytest]\ntestpaths = tests\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        rc_t, out_t = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc_t != 0:
+            return {"passed": False, "details": {"reason": "pytest failed", "out": out_t[-1500:]}}
+
+        rc_m, out_m = run_command(["mypy", "--strict", "."], cwd=wd, timeout=90.0)
+        if rc_m != 0:
+            return {"passed": False, "details": {"reason": "mypy --strict failed", "out": out_m[-1500:]}}
+
+        # core.py: return annotation is Subscript with value Name("tuple") or Name("Tuple").
+        core_tree = ast.parse((wd / "core.py").read_text(encoding="utf-8"))
+        ann_ok = False
+        for node in ast.walk(core_tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "get_values":
+                ret = node.returns
+                if isinstance(ret, ast.Subscript) and isinstance(ret.value, ast.Name) and ret.value.id in ("tuple", "Tuple"):
+                    ann_ok = True
+        if not ann_ok:
+            return {"passed": False, "details": {"reason": "core.py get_values return annotation not tuple[int, ...]"}}
+
+        # Consumers: no .append / .extend.
+        for caller in ("analytics.py", "export.py", "cache.py"):
+            text = (wd / caller).read_text(encoding="utf-8")
+            if ".append(" in text or ".extend(" in text:
+                return {"passed": False, "details": {"reason": f"{caller} still calls .append/.extend"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 300
+expected_tokens: 5500
+network: false

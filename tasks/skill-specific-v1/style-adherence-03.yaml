@@ -1,0 +1,72 @@
+id: style-adherence-03
+category: style-adherence
+description: "Reformat messy.py so `ruff format --check` passes; AST must be unchanged."
+license: MIT
+prompt: |
+  Reformat `messy.py` so that `ruff format --check messy.py` passes. The module's
+  AST (functions, classes, control flow, literal values) must be unchanged. Do not
+  modify `pyproject.toml`.
+setup:
+  files:
+    "messy.py": |
+      import   os,sys
+
+      def add(a ,b):return a+b
+      class   X :
+              def __init__( self,name ): self.name=name
+              def greet(self ):
+                          return 'hello, '+self .name
+
+
+      def main(  ):
+          x= X( 'world' )
+          print(x.greet())
+      if __name__=='__main__':main()
+    "pyproject.toml": |
+      [tool.ruff]
+      line-length = 88
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        pre_source = (
+            "import   os,sys\n\n"
+            "def add(a ,b):return a+b\n"
+            "class   X :\n"
+            "        def __init__( self,name ): self.name=name\n"
+            "        def greet(self ):\n"
+            "                    return 'hello, '+self .name\n\n\n"
+            "def main(  ):\n"
+            "    x= X( 'world' )\n"
+            "    print(x.greet())\n"
+            "if __name__=='__main__':main()\n"
+        )
+        pre_tree = ast.parse(pre_source)
+        try:
+            post_tree = ast.parse((wd / "messy.py").read_text(encoding="utf-8"))
+        except SyntaxError as exc:
+            return {"passed": False, "details": {"reason": f"post-state syntax error: {exc}"}}
+
+        pre_dump = ast.dump(pre_tree, annotate_fields=True, include_attributes=False)
+        post_dump = ast.dump(post_tree, annotate_fields=True, include_attributes=False)
+        if pre_dump != post_dump:
+            return {"passed": False, "details": {"reason": "AST differs after reformat"}}
+
+        # pyproject.toml must be unchanged.
+        actual_py = (wd / "pyproject.toml").read_text(encoding="utf-8")
+        if "line-length = 88" not in actual_py:
+            return {"passed": False, "details": {"reason": "pyproject.toml was weakened"}}
+
+        # ruff format --check.
+        rc, out = run_command(["ruff", "format", "--check", "messy.py"], cwd=wd, timeout=30.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "ruff format --check failed", "out": out[-1500:]}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 180
+expected_tokens: 3000
+network: false

@@ -1,0 +1,93 @@
+id: refactor-02
+category: refactor
+description: "Replace `calculate_pay` if/elif on employee.type with polymorphism (subclasses or strategy registry); tests pass."
+license: MIT
+prompt: |
+  Refactor `payroll.py` to replace the conditional in `calculate_pay` with
+  polymorphism: introduce subclasses (or a strategy registry) so that adding a new
+  employee type does not require editing `calculate_pay`. All tests must still
+  pass.
+setup:
+  files:
+    "payroll.py": |
+      class Employee:
+          def __init__(self, type, base, units=0):
+              self.type = type
+              self.base = base
+              self.units = units
+
+
+      def calculate_pay(employee):
+          if employee.type == 'hourly':
+              return employee.base * employee.units
+          elif employee.type == 'salaried':
+              return employee.base
+          elif employee.type == 'commission':
+              return employee.base + 0.1 * employee.units
+          elif employee.type == 'contractor':
+              return employee.units * 100
+          else:
+              raise ValueError(f"unknown type {employee.type}")
+    "test_payroll.py": |
+      from payroll import Employee, calculate_pay
+
+
+      def test_hourly():
+          assert calculate_pay(Employee("hourly", 20, 40)) == 800
+
+
+      def test_salaried():
+          assert calculate_pay(Employee("salaried", 5000)) == 5000
+
+
+      def test_commission():
+          assert calculate_pay(Employee("commission", 1000, 500)) == 1050.0
+
+
+      def test_contractor():
+          assert calculate_pay(Employee("contractor", 0, 7)) == 700
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # Post-state tests pass.
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed", "out": out[-1500:]}}
+
+        tree = ast.parse((wd / "payroll.py").read_text(encoding="utf-8"))
+
+        # No `Compare` on `.type` attribute remains anywhere in the module.
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Compare):
+                # Check left + any comparator side for Attribute(attr='type').
+                operands = [node.left, *node.comparators]
+                for op in operands:
+                    if isinstance(op, ast.Attribute) and op.attr == "type":
+                        return {"passed": False, "details": {"reason": "conditional on .type still present"}}
+
+        # >=4 classes OR a module-level dict mapping the 4 type strings to callables.
+        class_count = sum(1 for n in ast.walk(tree) if isinstance(n, ast.ClassDef))
+        has_registry = False
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict):
+                keys = {
+                    k.value for k in node.value.keys
+                    if isinstance(k, ast.Constant) and isinstance(k.value, str)
+                }
+                if {"hourly", "salaried", "commission", "contractor"}.issubset(keys):
+                    has_registry = True
+                    break
+
+        if class_count < 4 and not has_registry:
+            return {"passed": False, "details": {"reason": "no polymorphic structure (need >=4 subclasses or a registry)"}}
+
+        return {"passed": True, "details": {"class_count": class_count, "registry": has_registry}}
+time_budget_s: 300
+expected_tokens: 5000
+network: false

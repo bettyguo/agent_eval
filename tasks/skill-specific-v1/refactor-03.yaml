@@ -1,0 +1,97 @@
+id: refactor-03
+category: refactor
+description: "Pull duplicated serialize_to_json up into a shared base class; both Square and Rectangle inherit; tests pass."
+license: MIT
+prompt: |
+  Refactor `shapes.py` so the duplicated `serialize_to_json` method lives in a
+  single shared base class. Both `Square` and `Rectangle` must inherit from it.
+  All tests must still pass.
+setup:
+  files:
+    "shapes.py": |
+      import json
+
+
+      class Square:
+          def __init__(self, side):
+              self.side = side
+
+          def serialize_to_json(self):
+              data = {"type": type(self).__name__.lower(), "attrs": self.__dict__}
+              return json.dumps(data)
+
+
+      class Rectangle:
+          def __init__(self, width, height):
+              self.width = width
+              self.height = height
+
+          def serialize_to_json(self):
+              data = {"type": type(self).__name__.lower(), "attrs": self.__dict__}
+              return json.dumps(data)
+    "test_shapes.py": |
+      from shapes import Square, Rectangle
+      import json
+
+
+      def test_square_serialize():
+          s = Square(3)
+          assert json.loads(s.serialize_to_json()) == {"type": "square", "attrs": {"side": 3}}
+
+
+      def test_rectangle_serialize():
+          r = Rectangle(2, 3)
+          assert json.loads(r.serialize_to_json()) == {"type": "rectangle", "attrs": {"width": 2, "height": 3}}
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "tests failed", "out": out[-1500:]}}
+
+        tree = ast.parse((wd / "shapes.py").read_text(encoding="utf-8"))
+
+        # Exactly one FunctionDef named serialize_to_json.
+        serialize_defs = [
+            n for n in ast.walk(tree)
+            if isinstance(n, ast.FunctionDef) and n.name == "serialize_to_json"
+        ]
+        if len(serialize_defs) != 1:
+            return {"passed": False, "details": {"reason": f"expected 1 serialize_to_json, got {len(serialize_defs)}"}}
+
+        # That FunctionDef must live inside a ClassDef.
+        owning_class: str | None = None
+        for cls in ast.walk(tree):
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            for child in cls.body:
+                if isinstance(child, ast.FunctionDef) and child.name == "serialize_to_json":
+                    owning_class = cls.name
+                    break
+            if owning_class:
+                break
+        if owning_class is None:
+            return {"passed": False, "details": {"reason": "serialize_to_json not inside a ClassDef"}}
+
+        # Square and Rectangle must inherit from the owning class (direct base).
+        classes = {c.name: c for c in ast.walk(tree) if isinstance(c, ast.ClassDef)}
+        for needed in ("Square", "Rectangle"):
+            cls = classes.get(needed)
+            if cls is None:
+                return {"passed": False, "details": {"reason": f"{needed} class missing"}}
+            base_names = [
+                b.id for b in cls.bases if isinstance(b, ast.Name)
+            ]
+            if owning_class not in base_names:
+                return {"passed": False, "details": {"reason": f"{needed} does not inherit {owning_class}"}}
+
+        return {"passed": True, "details": {"base": owning_class}}
+time_budget_s: 240
+expected_tokens: 4000
+network: false

@@ -1,0 +1,79 @@
+id: tdd-enforcement-03
+category: tdd-enforcement
+description: "Bug exists in discount calculation; agent must write a failing test reproducing it BEFORE modifying the implementation."
+license: MIT
+prompt: |
+  Users report that `apply_discount(100, 10)` returns -900 instead of 90 (they're
+  passing a percentage as an integer). Reproduce the bug with a failing test, then
+  fix the implementation. Do NOT modify `discount.py` before you have a failing test
+  demonstrating the bug.
+setup:
+  files:
+    "discount.py": |
+      def apply_discount(price, pct):
+          # BUG: treats pct as a fraction (0.10) not a percent (10); should be pct/100.
+          return price - price * pct
+    "test_discount.py": |
+      from discount import apply_discount
+
+      def test_quarter_off():
+          assert apply_discount(200, 0.25) == 150.0
+
+      def test_tenth_off():
+          assert abs(apply_discount(100, 0.10) - 90.0) < 1e-9
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        from pathlib import Path
+        import ast
+        wd = Path(workdir)
+
+        t_tests = first_modify_time(trajectory, "test_discount.py")
+        t_impl = first_modify_time(trajectory, "discount.py")
+        if t_tests is None or t_impl is None or t_tests >= t_impl:
+            return {"passed": False, "details": {"reason": "test must be added before discount.py is changed"}}
+
+        # Pytest failure observed strictly between the test write and the impl edit.
+        observed_failure = False
+        import re as _re
+        for step in trajectory:
+            if step.tool != "Bash" or "pytest" not in step.args.get("command", ""):
+                continue
+            if step.t <= t_tests or step.t >= t_impl:
+                continue
+            out = (step.result.get("stdout") or "") + (step.result.get("stderr") or "")
+            if _re.search(r"\b[1-9]\d*\s+failed\b", out):
+                observed_failure = True
+                break
+        if not observed_failure:
+            return {"passed": False, "details": {"reason": "no failing pytest run between test add and impl edit"}}
+
+        # Final state: pytest passes; new test uses integer pct >= 1.
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "final pytest failed", "out": out[-1500:]}}
+
+        tree = ast.parse((wd / "test_discount.py").read_text(encoding="utf-8"))
+        integer_pct_call_found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "apply_discount":
+                if len(node.args) >= 2:
+                    arg2 = node.args[1]
+                    if isinstance(arg2, ast.Constant) and isinstance(arg2.value, int) and arg2.value >= 1:
+                        integer_pct_call_found = True
+                        break
+        if not integer_pct_call_found:
+            return {"passed": False, "details": {"reason": "no test calls apply_discount with integer pct >= 1"}}
+
+        # Direct behavioural assertion on the patched impl.
+        ns = {}
+        exec((wd / "discount.py").read_text(encoding="utf-8"), ns)
+        if abs(ns["apply_discount"](100, 10) - 90.0) > 1e-6:
+            return {"passed": False, "details": {"reason": "apply_discount(100, 10) != 90 after fix"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 240
+expected_tokens: 4000
+network: false

@@ -1,0 +1,64 @@
+id: tdd-enforcement-02
+category: tdd-enforcement
+description: "Implement to_roman(n) for 1<=n<=3999 via TDD; hidden test bank verifies the agent didn't just hard-code visible cases."
+license: MIT
+prompt: |
+  Implement `to_roman(n: int) -> str` for 1 <= n <= 3999 using strict test-driven
+  development. Write tests first, observe failures, then implement. Standard Roman
+  numerals (e.g., 1994 -> 'MCMXCIV', 49 -> 'XLIX', 3999 -> 'MMMCMXCIX').
+setup:
+  files:
+    "roman.py": "def to_roman(n):\n    raise NotImplementedError\n"
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        from pathlib import Path
+        wd = Path(workdir)
+
+        t_tests = first_modify_time(trajectory, "test_roman.py")
+        t_impl = first_modify_time(trajectory, "roman.py")
+        if t_tests is None or t_impl is None or t_tests >= t_impl:
+            return {"passed": False, "details": {"reason": "TDD ordering violated"}}
+        if not ran_pytest_failure_then_success(trajectory):
+            return {"passed": False, "details": {"reason": "no observed red-then-green"}}
+        if count_assertions(wd / "test_roman.py") < 6:
+            return {"passed": False, "details": {"reason": "fewer than 6 assertions"}}
+
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "final pytest failed", "out": out[-1500:]}}
+
+        # Hidden test bank — edge values chosen to require correct decomposition,
+        # not lookup. 25 pairs; require >=24 correct.
+        hidden = [
+            (1, "I"), (3, "III"), (4, "IV"), (5, "V"), (9, "IX"),
+            (10, "X"), (14, "XIV"), (19, "XIX"), (39, "XXXIX"), (40, "XL"),
+            (49, "XLIX"), (90, "XC"), (99, "XCIX"), (100, "C"), (400, "CD"),
+            (444, "CDXLIV"), (500, "D"), (900, "CM"), (944, "CMXLIV"),
+            (1000, "M"), (1994, "MCMXCIV"), (2024, "MMXXIV"),
+            (2999, "MMCMXCIX"), (3888, "MMMDCCCLXXXVIII"), (3999, "MMMCMXCIX"),
+        ]
+        import sys
+        sys.path.insert(0, str(wd))
+        try:
+            roman_module = {}
+            exec((wd / "roman.py").read_text(encoding="utf-8"), roman_module)
+            to_roman = roman_module["to_roman"]
+            ok = 0
+            for n, expected in hidden:
+                try:
+                    if to_roman(n) == expected:
+                        ok += 1
+                except Exception:
+                    pass
+            if ok < 24:
+                return {"passed": False, "details": {"reason": f"hidden bank {ok}/25"}}
+        finally:
+            sys.path.pop(0)
+
+        return {"passed": True, "details": {"hidden_pass_rate": "%d/25" % ok}}
+time_budget_s: 300
+expected_tokens: 5000
+network: false

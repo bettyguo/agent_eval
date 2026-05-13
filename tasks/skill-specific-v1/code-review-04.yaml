@@ -1,0 +1,78 @@
+id: code-review-04
+category: code-review
+description: "Flag the race condition in Cache.get_instance lazy initialisation."
+license: MIT
+prompt: |
+  Review `cache.py` assuming it will be used from multiple threads. Do not modify
+  the file.
+setup:
+  files:
+    "cache.py": |
+      """Process-wide cache singleton (intentionally not thread-safe)."""
+
+
+      class Cache:
+          _instance = None
+
+          def __init__(self):
+              self._storage = {}
+
+          @classmethod
+          def get_instance(cls):
+              if cls._instance is None:
+                  cls._instance = Cache()
+              return cls._instance
+
+          def put(self, key, value):
+              self._storage[key] = value
+
+          def get(self, key):
+              return self._storage.get(key)
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import re as _re
+        from pathlib import Path
+        wd = Path(workdir)
+
+        post = (wd / "cache.py").read_bytes()
+        if b"if cls._instance is None" not in post:
+            return {"passed": False, "details": {"reason": "cache.py was modified"}}
+
+        msg = (final_state.assistant_final_message or "")
+        lower = msg.lower()
+
+        keyword_patterns = [
+            r"race\s+condition",
+            r"thread[\s\-]?safe",
+            r"not\s+thread\s+safe",
+            r"\bmutex\b",
+            r"\block\b",
+            r"concurren[ct]",
+            r"multiple\s+instances",
+            r"double[\s\-]?checked\s+locking",
+            r"\btocttou\b",
+        ]
+        if not grep_final_message(msg, keyword_patterns):
+            return {"passed": False, "details": {"reason": "did not flag concurrency issue"}}
+
+        # Localisation.
+        if not any(t in lower for t in ("get_instance", "_instance", "cache class", "the cache")):
+            return {"passed": False, "details": {"reason": "did not localise to get_instance / _instance"}}
+
+        # Failure-mode awareness: agent should explain that *two* instances may be created.
+        instance_window_match = _re.search(
+            r"(two|both|multiple|several|2)\W{0,50}instance",
+            lower,
+        ) or _re.search(
+            r"instance\W{0,50}(two|both|multiple|several|2)",
+            lower,
+        )
+        if not instance_window_match:
+            return {"passed": False, "details": {"reason": "did not articulate the duplicate-instance failure mode"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 120
+expected_tokens: 2500
+network: false

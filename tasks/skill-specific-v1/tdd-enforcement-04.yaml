@@ -1,0 +1,88 @@
+id: tdd-enforcement-04
+category: tdd-enforcement
+description: "Implement BoundedStack iteratively (>=3 interleaved test/run cycles, each cycle observing a real failure)."
+license: MIT
+prompt: |
+  Implement `BoundedStack` with methods `push`, `pop`, `peek`, `__len__`. The
+  constructor takes `capacity`. Raise `OverflowError` on push past capacity,
+  `IndexError` on pop/peek when empty. Use TDD with ONE behaviour per cycle: write
+  a test for behaviour N, observe a failure, implement it, observe pass, then move
+  to behaviour N+1. Use at least 3 such cycles.
+setup:
+  files:
+    "stack.py": |
+      class BoundedStack:
+          def __init__(self, capacity):
+              pass
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        from pathlib import Path
+        import ast
+        import re as _re
+        wd = Path(workdir)
+
+        test_writes = [
+            step for step in trajectory
+            if step.tool in ("Write", "Edit")
+            and (step.args.get("path") or step.args.get("file_path") or "").endswith("test_stack.py")
+        ]
+        if len(test_writes) < 3:
+            return {"passed": False, "details": {"reason": f"only {len(test_writes)} test_stack.py write events (need >=3)"}}
+
+        # Need >=2 pytest failures interleaved across the test writes.
+        failures = 0
+        for step in trajectory:
+            if step.tool != "Bash" or "pytest" not in step.args.get("command", ""):
+                continue
+            out = (step.result.get("stdout") or "") + (step.result.get("stderr") or "")
+            if _re.search(r"\b\d+\s+failed\b", out):
+                failures += 1
+        if failures < 2:
+            return {"passed": False, "details": {"reason": f"only {failures} pytest failures observed (need >=2)"}}
+
+        # Final state: pytest passes and >=5 test_ functions.
+        rc, out = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc != 0:
+            return {"passed": False, "details": {"reason": "final pytest failed", "out": out[-1500:]}}
+
+        test_path = wd / "test_stack.py"
+        if not test_path.exists():
+            return {"passed": False, "details": {"reason": "test_stack.py missing"}}
+        tree = ast.parse(test_path.read_text(encoding="utf-8"))
+        n_tests = sum(
+            1 for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("test_")
+        )
+        if n_tests < 5:
+            return {"passed": False, "details": {"reason": f"only {n_tests} test_ functions (need >=5)"}}
+
+        # Hidden behavioural checks.
+        ns = {}
+        exec((wd / "stack.py").read_text(encoding="utf-8"), ns)
+        Stack = ns["BoundedStack"]
+        s = Stack(2)
+        try:
+            s.push(1)
+            s.push(2)
+            try:
+                s.push(3)
+                return {"passed": False, "details": {"reason": "push past capacity did not raise OverflowError"}}
+            except OverflowError:
+                pass
+            if s.peek() != 2 or len(s) != 2 or s.pop() != 2 or s.pop() != 1:
+                return {"passed": False, "details": {"reason": "behavioural mismatch on peek/pop/len"}}
+            try:
+                s.pop()
+                return {"passed": False, "details": {"reason": "empty pop did not raise IndexError"}}
+            except IndexError:
+                pass
+        except Exception as exc:
+            return {"passed": False, "details": {"reason": f"behavioural exception: {exc}"}}
+
+        return {"passed": True, "details": {"n_tests": n_tests, "failures_observed": failures}}
+time_budget_s: 300
+expected_tokens: 5000
+network: false

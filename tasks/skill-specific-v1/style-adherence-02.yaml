@@ -1,0 +1,99 @@
+id: style-adherence-02
+category: style-adherence
+description: "Annotate geometry.py to pass `mypy --strict` with zero errors; no type-suppression markers; behaviour preserved."
+license: MIT
+prompt: |
+  Make `mypy --strict geometry.py` pass with zero errors. All tests in
+  `test_geometry.py` must still pass. Do NOT change parameter names. Do NOT add
+  `# type: ignore` (or any suppression marker).
+setup:
+  files:
+    "geometry.py": |
+      import math
+
+
+      def area_circle(radius):
+          return math.pi * radius * radius
+
+
+      def area_triangle(base, height):
+          return 0.5 * base * height
+
+
+      def centroid(points):
+          if not points:
+              return None
+          xs = [p[0] for p in points]
+          ys = [p[1] for p in points]
+          return (sum(xs) / len(xs), sum(ys) / len(ys))
+    "test_geometry.py": |
+      from geometry import area_circle, area_triangle, centroid
+
+
+      def test_area_circle():
+          assert abs(area_circle(1.0) - 3.141592653589793) < 1e-9
+
+
+      def test_area_triangle():
+          assert area_triangle(2.0, 3.0) == 3.0
+
+
+      def test_centroid_simple():
+          assert centroid([(0.0, 0.0), (2.0, 0.0), (0.0, 2.0)]) == (2 / 3, 2 / 3)
+
+
+      def test_centroid_empty_returns_none():
+          assert centroid([]) is None
+    "mypy.ini": |
+      [mypy]
+      python_version = 3.11
+      strict = True
+    "pytest.ini": "[pytest]\ntestpaths = .\n"
+grader:
+  type: python
+  script: |
+    def grade(workdir, trajectory, final_state):
+        import ast
+        from pathlib import Path
+        wd = Path(workdir)
+
+        # No suppression markers.
+        if not no_suppressions(wd / "geometry.py", forbidden=["type: ignore", "type:ignore"]):
+            return {"passed": False, "details": {"reason": "geometry.py contains type: ignore"}}
+
+        # mypy.ini must not have been weakened.
+        mypy_ini = (wd / "mypy.ini").read_text(encoding="utf-8")
+        if "strict = True" not in mypy_ini:
+            return {"passed": False, "details": {"reason": "mypy.ini was weakened"}}
+
+        # mypy must pass.
+        rc_mypy, out_mypy = run_command(
+            ["mypy", "--strict", "geometry.py"], cwd=wd, timeout=60.0
+        )
+        if rc_mypy != 0 or "Success" not in out_mypy:
+            return {"passed": False, "details": {"reason": "mypy failed", "out": out_mypy[-1500:]}}
+
+        # Tests must pass.
+        rc_t, out_t = run_command(["pytest", "-q"], cwd=wd, timeout=60.0)
+        if rc_t != 0:
+            return {"passed": False, "details": {"reason": "pytest failed", "out": out_t[-1500:]}}
+
+        # Parameter names preserved.
+        expected = {
+            "area_circle": ["radius"],
+            "area_triangle": ["base", "height"],
+            "centroid": ["points"],
+        }
+        tree = ast.parse((wd / "geometry.py").read_text(encoding="utf-8"))
+        seen = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name in expected:
+                seen[node.name] = [a.arg for a in node.args.args]
+        for fn, args in expected.items():
+            if seen.get(fn) != args:
+                return {"passed": False, "details": {"reason": f"parameter names of {fn} changed: {seen.get(fn)}"}}
+
+        return {"passed": True, "details": {}}
+time_budget_s: 300
+expected_tokens: 5000
+network: false
