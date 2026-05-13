@@ -27,5 +27,5 @@ numpy>=1.26,<3.0
 pytest>=8,<10
 pytest-cov<10.0
 ruff<1.0
-mypy<2.0
+mypy<3.0
 pre-commit<5.0
