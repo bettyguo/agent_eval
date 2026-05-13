@@ -1,9 +1,8 @@
 """TaskSet loader and built-in registry.
 
-Implements DESIGN.md §1.2 TaskSet class. Loads `<dir>/meta.yaml` and all
-sibling `*.yaml` files, validates against the schema, computes the normalized
-task_set_hash, and resolves each task's effective `panel` (inheriting from
-meta.yaml if unspecified at the task level).
+Loads `<dir>/meta.yaml` and all sibling `*.yaml` files, validates against
+the schema, computes the normalised task_set_hash, and resolves each
+task's effective `panel` (inheriting from meta.yaml if unspecified).
 """
 
 from __future__ import annotations

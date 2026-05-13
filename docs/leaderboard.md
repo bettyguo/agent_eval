@@ -1,147 +1,127 @@
-# Leaderboard frontend design
+# Leaderboard frontend
 
-> Phase 1 §4.6 deliverable. Methodology context in [`methodology.md`](methodology.md) §9.
+Methodology context in [methodology.md](methodology.md) §9.
 
-## 1. Goals
+## Goals
 
-- **Honest by construction.** Two clearly-separated panels — primary (citable) and secondary (informative-but-contaminated). No combined ranking.
-- **Sortable, not ranked.** Every column is sortable; no scalar "agenteval score" is published.
-- **Verification status visible.** Every row carries a `verified` / `pending` / `partial` / `failed` badge.
-- **Static + edge.** No backend. Vercel edge cache. Refresh on `main` branch update.
-- **No tracking.** No login. No telemetry. Privacy by absence.
+- Two clearly-separated panels: primary (citable) and secondary
+  (informative-but-contaminated). No combined ranking.
+- Sortable, not ranked. No "agenteval score" published.
+- Every row carries a verification badge (`verified` / `pending` /
+  `partial` / `failed`).
+- Static + edge. No backend; Vercel edge cache. Refreshes on `main`.
+- No tracking, no login, no telemetry.
 
-## 2. Tech stack
+## Stack
 
-- Next.js 14 (App Router).
-- Tailwind CSS for layout; minimal custom CSS.
-- Static export (`next export`); deployed to Vercel.
-- Data: a single static JSON snapshot in `frontend/public/data/leaderboard.json`, produced by `agenteval leaderboard-export` from the DuckDB store (`src/agenteval/leaderboard_export.py`).
-- No client-side analytics; no third-party scripts.
+- Next.js 14 (App Router), Tailwind CSS, static export via `next export`.
+- Data: a single static JSON in `frontend/public/data/leaderboard.json`,
+  produced by `src/agenteval/leaderboard_export.py`.
+- No client-side analytics, no third-party scripts.
 
-## 3. Page structure
+## Pages
 
 ### `/` — landing
 
-Hero block: a clean screenshot/animation of the primary leaderboard table. One-line value prop: *"The first reproducible benchmark for Claude Code Skills."* Two CTA buttons: **Run on your skills** (→ `/docs/quickstart`) and **Submit a result** (→ `/docs/submitting`).
+Hero block with a leaderboard screenshot, a one-line value prop, and two
+CTAs: "Run on your skills" and "Submit a result". Below: a short TL;DR and
+the latest verified primary-panel entries.
 
-Below the hero: a 30-second TL;DR + the latest 5 verified entries from the primary panel.
+### `/leaderboard` — main view
 
-### `/leaderboard` — the main view
-
-A two-panel layout:
-
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ PRIMARY PANEL — skill-specific-v1 + tau-bench-v1                          │
-│                                                                          │
-│ Sortable table. Columns:                                                 │
-│   Skill bundle | Model | pass@1 | pass@5 | pass^5 | cost  | latency      │
-│                                                                          │
-│ Plus flag badges to the right of each row: high-variance, talkative,     │
-│ tool-storm, pricing-stale, model-drift, borderline-stability,            │
-│ holdout-divergence, passive.                                             │
-│                                                                          │
-│ Plus a "verified" badge: green tick / amber pending / red failed.        │
-└──────────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────────┐
-│ SECONDARY PANEL — swe-bench-lite-v1  ⚠ Informative but contaminated      │
-│                                                                          │
-│ "Contaminated benchmark — delta may be confounded by skill ×             │
-│  memorization interaction; not citable as a skill-effect claim."         │
-│                                                                          │
-│ Same table structure as primary. Visually de-emphasized:                 │
-│   - muted background colour                                              │
-│   - section heading carries an info icon with hover-card                 │
-│   - collapsed by default; click "Show secondary panel" to expand         │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-Filter bar above each panel: by model, by runner, by category (`tdd-enforcement`, `code-review`, …). Filters apply within the panel only.
-
-Sort header on every column. Default sort: primary panel by `pass@1` descending; secondary panel by `pass@1` descending. No "overall" or "agenteval-score" column.
-
-### `/leaderboard/pareto` — Pareto plot view
-
-Scatter plot:
-- X-axis: `cost_usd` median per task.
-- Y-axis: `pass@1`.
-- Each point = one leaderboard entry.
-- Pareto frontier highlighted in colour.
-- Hover: skill name, model, exact values, flag badges.
-- Filter dropdowns: panel, model, runner, category.
-
-Plot library: `Plot` (Observable Plot) for static SVG; no client interactivity beyond hover. Plot rendered server-side via `@observablehq/plot` SSR; the static export ships the SVG.
-
-### `/entry/[hash]` — entry detail
-
-For a given `entry_hash`:
-
-- Skill bundle header: name, snapshot SHA, upstream URL, license summary per skill, submitted-at.
-- Task-set header: name, version, hash, panel.
-- Runner header: provider, model, `model_response_fingerprint` (with `model-drift` warning if applicable), temperature, seed list.
-- Pricing header: `pricing.yaml` `last_audited` date, SHA.
-- Metrics block: full table with per-category breakdowns + bootstrapped CIs.
-- Flags block: each flag with one-paragraph explanation linking to `docs/metrics.md`.
-- Verification block: status, two-VM agreement matrix, link to the JSON report.
-- Per-task drill-down: one row per task, click expands to per-seed pass/fail + trajectory summary.
-- Raw JSON link + download.
-
-### `/docs/methodology` — embeds `docs/methodology.md`
-
-Rendered Markdown; full document searchable in-page. Section anchor links work.
-
-### `/docs/submitting` — submission instructions
-
-PR-based: fork the repo, run `agenteval eval` locally, run `agenteval submit`, commit the resulting JSON under `frontend/data/submissions/`, open a PR. CI re-verifies (two-VM) and approves automatically if verification passes.
-
-### `/docs/opt-outs` — opt-out registry
-
-A short page listing any skill authors who have requested removal, with a brief, neutral note: *"At the author's request, `<skill>` is not displayed on the leaderboard."*
-
-## 4. Wireframe — primary panel table row
+Two-panel layout.
 
 ```
-┌───────────────────────┬─────────────────┬──────┬──────┬──────┬─────────┬─────────┬──────────────────────┐
-│ mattpocock/skills@abc │ claude-opus-4-7 │ 0.42 │ 0.71 │ 0.31 │  $0.18  │  43 s   │ [✓ verified]         │
-│                       │                 │ ±0.06│ ±0.05│ ±0.07│ ±$0.02  │ ±5s     │ [⚠ high-variance]    │
-└───────────────────────┴─────────────────┴──────┴──────┴──────┴─────────┴─────────┴──────────────────────┘
+┌─ PRIMARY: skill-specific-v1 + tau-bench-v1 ────────────────────────┐
+│ Sortable table:                                                    │
+│   Skill bundle | Model | pass@1 | pass@5 | pass^5 | cost | latency │
+│ Plus flag badges per row + verification badge.                     │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─ SECONDARY: swe-bench-lite-v1  (Informative but contaminated) ─────┐
+│ Same columns; visually de-emphasised; collapsed by default.        │
+│ Banner: "Contaminated benchmark; not citable as a skill-effect     │
+│ claim."                                                            │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-- First line: point estimate.
-- Second line: 95% CI half-width.
-- Right-cell stack of badges: verification + flags.
+Filter bar per panel (model, runner, category). Filters scope to their
+panel. Every column header sorts. Default sort: pass@1 descending.
 
-Click anywhere on a row → entry detail page.
+### `/leaderboard/pareto`
 
-## 5. Data pipeline
+Scatter plot of `cost_usd` (x) vs `pass@1` (y); Pareto frontier
+highlighted. Hover shows skill name, model, values, flags. Filters mirror
+the table view. Plot rendered server-side as SVG (Observable Plot); no
+client interactivity beyond hover.
+
+### `/entry/[hash]`
+
+Per-entry detail page. Bundle, task-set, runner, pricing headers; metrics
+table with per-category breakdowns and CIs; flag block linking to
+metrics.md; verification block with the two-VM agreement matrix; per-task
+drill-down with per-seed pass/fail; raw JSON link.
+
+### `/docs/methodology`
+
+Renders [methodology.md](methodology.md); section anchors work.
+
+### `/docs/submitting`
+
+Submission instructions. Fork, run `agenteval eval`, run
+`agenteval submit`, commit the result under
+`frontend/data/submissions/`, open a PR. CI re-verifies; merge after the
+two-VM verifier agrees.
+
+### `/docs/opt-outs`
+
+Short page listing any skill authors who have requested removal, neutral
+phrasing per request.
+
+## Wireframe — primary-panel row
+
+```
+┌──────────────────────┬─────────────────┬──────┬──────┬──────┬─────────┬─────────┬─────────────────┐
+│ mattpocock/skills@…  │ claude-opus-4-7 │ 0.42 │ 0.71 │ 0.31 │  $0.18  │  43 s   │ [verified]      │
+│                      │                 │ ±0.06│ ±0.05│ ±0.07│  ±$0.02 │  ±5s    │ [high-variance] │
+└──────────────────────┴─────────────────┴──────┴──────┴──────┴─────────┴─────────┴─────────────────┘
+```
+
+Top line is the point estimate; bottom line the 95% CI half-width. Right
+cell stacks badges. Clicking a row routes to the entry detail page.
+
+## Data pipeline
 
 ```
 DuckDB results store
     ↓ src/agenteval/leaderboard_export.py
-frontend/public/data/leaderboard.json   (versioned, schema-validated)
+frontend/public/data/leaderboard.json
     ↓ Next.js static export
 Vercel edge cache
 ```
 
-The export script is deterministic given the DuckDB contents and the export schema version. A schema change requires a frontend deploy in lockstep.
+The export is deterministic given the DuckDB contents and export schema
+version. Schema changes require a frontend deploy in lockstep.
 
-## 6. Accessibility
+## Accessibility
 
-- All tables are real `<table>` elements with `scope` attributes.
-- Sortable columns have ARIA `aria-sort` attributes.
-- Flag badges have `title` and `aria-label` attributes that explain the flag.
-- Pareto plot has a sibling `<table>` rendering the same data for screen-readers.
+- Real `<table>` elements with `scope` attributes.
+- `aria-sort` on sortable columns.
+- `title` + `aria-label` on flag badges.
+- The Pareto plot has a sibling `<table>` rendering the same data for
+  screen readers.
 
-## 7. Performance budget
+## Performance budget
 
-- TTFB on Vercel edge: <200 ms (per master prompt §8 DoD).
+- TTFB on Vercel edge: <200 ms.
 - LCP: <1.5 s on a 4G connection.
-- Total page weight (HTML + CSS + JS + JSON): <300 KB for `/` and `/leaderboard`.
-- No client-side JS framework beyond what Next.js ships; no client-side data fetching (the JSON is inlined or fetched as a single static asset).
+- Total page weight for `/` and `/leaderboard`: <300 KB.
+- No client-side data fetching; the JSON is inlined or loaded as a single
+  static asset.
 
-## 8. Implementation references
+## Implementation
 
-- Code: `frontend/app/` (App Router pages), `frontend/components/` (table, pareto, badges), `frontend/data/` (build-time data fetch).
-- Phase 2 M6 implements this; deployed under a subdomain like `leaderboard.agenteval.dev` (placeholder; domain not yet registered).
-- Phase 3 §6.1 produces the launch-ready screenshot of the primary panel.
+- `frontend/app/` (App Router pages), `frontend/components/`,
+  `frontend/data/`.
+- Deployed under a subdomain (e.g. `leaderboard.agenteval.dev` — domain
+  placeholder; not yet registered).

@@ -1,4 +1,4 @@
-"""Tests for M3 metrics module."""
+"""Tests for the metrics module."""
 
 from __future__ import annotations
 

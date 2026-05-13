@@ -1,11 +1,7 @@
 """Harness: glue between SkillBundle, TaskSet, Runner, Sandbox.
 
-Iterates over (task × seed), produces a Result.
-
-M1 ships canonical-seeds + single-seed exploratory modes; cost computation and
-the full metric/flag battery are M3 deliverables. M1's Result is intentionally
-slim: per-task pass/fail, latency, tool_calls, tokens. pass@1 is computed
-inline as a sanity check.
+Iterates over (task × seed) and produces a Result with metrics, flags, and
+per-attempt records.
 """
 
 from __future__ import annotations
@@ -64,7 +60,7 @@ class PerAttempt:
 
 @dataclass(frozen=True)
 class Result:
-    """Aggregate output of Harness.evaluate (DESIGN.md §1.2)."""
+    """Aggregate output of Harness.evaluate."""
 
     bundle_hash: str
     task_set_hash: str
@@ -85,7 +81,7 @@ class Result:
     aux: dict[str, Any] = field(default_factory=dict)
 
     def summary(self) -> dict[str, Any]:
-        """Rich M3 summary backed by `compute_summary`."""
+        """Summary dict backed by `compute_summary`."""
         if self.metric_summary is None:
             # Fallback if cost/metrics weren't computed (e.g., mock tests).
             n = len(self.per_attempt)
@@ -104,11 +100,11 @@ class Result:
         return out
 
     def to_leaderboard_entry(self) -> dict[str, Any]:
-        """Canonical JSON shape (DESIGN.md §1.2). Full hash-stamping in M5."""
+        """Canonical JSON shape; full hash-stamping is done by `submit.build_leaderboard_entry`."""
         if not self.leaderboard_eligible:
             raise LeaderboardIneligible(
-                "result is not eligible for the primary leaderboard: "
-                "see DESIGN.md §1.2 eligibility criteria",
+                "result is not eligible for the primary leaderboard "
+                "(check temperature, seed list, panel)",
                 seeds=list(self.seeds),
                 temperature=self.temperature,
                 task_set_panel=self.task_set_panel,
@@ -142,8 +138,8 @@ class Result:
 class Harness:
     """Wires a runner + sandbox + task set + skill bundle. Returns a Result.
 
-    See DESIGN.md §1.2 for the public contract. M1 sequencing is single-process
-    over (task × seed); parallelism (§1.5) is an M3 feature.
+    Sequencing is single-process over (task × seed); parallelism is on the
+    roadmap.
     """
 
     def __init__(
@@ -296,7 +292,7 @@ class Harness:
         )
 
     def _eligibility(self, task_set: TaskSet, attempts: list[PerAttempt]) -> bool:
-        """ADR-0015 + DESIGN.md §1.2 eligibility criteria, minus M3-only checks."""
+        """Leaderboard-eligibility: temperature 0, canonical seeds, primary panel."""
         if self.temperature != 0.0:
             return False
         if not self.canonical_seeds or self.seeds != CANONICAL_SEEDS:

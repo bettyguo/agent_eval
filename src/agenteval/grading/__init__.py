@@ -1,7 +1,7 @@
 """Grader interface, shared utilities, and execution.
 
-Implements docs/tasks.md §3 (grader interface contract) and §3.5 (shared utility
-library). Graders are deterministic Python (ADR-0006: no LLM-as-judge).
+Graders are deterministic Python (no LLM-as-judge in v1). See
+`docs/tasks.md` for the interface contract.
 """
 
 from agenteval.grading.runner import run_grader

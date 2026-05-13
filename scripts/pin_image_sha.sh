@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# Resolve the current pinned sandbox base image to a SHA256 digest and update
-# sandbox/image.lock in place.
+# Resolve the pinned sandbox base image to a SHA256 digest and update
+# sandbox/image.lock in place. Run when the base image is bumped.
 #
-# Per Phase 3 §6.6 (reproducibility hardening) and ADR-0017. Run this whenever
-# the base image is intentionally updated. Maintainers commit the resulting
-# image.lock change; the verifier then enforces the SHA on every leaderboard
-# entry's submission and re-verification.
-#
-# Requires: Docker daemon running, jq, sed.
+# Requires: Docker daemon running, jq.
 #
 # Usage:
 #   ./scripts/pin_image_sha.sh                          # use the tag in image.lock
-#   ./scripts/pin_image_sha.sh python:3.11-bookworm-slim   # override
+#   ./scripts/pin_image_sha.sh python:3.11-bookworm-slim  # override
 
 set -euo pipefail
 
@@ -59,7 +54,6 @@ echo "  image:       $TAG"
 echo "  sha256:      $DIGEST"
 echo "  last_audited: $TODAY"
 echo
-echo "Next: commit the change and re-run leaderboard verification on every"
-echo "entry. Per ADR-0017, sandbox_image_sha is stored but NOT part of the"
-echo "entry_hash; mismatch during re-verification triggers the sandbox-drift"
-echo "flag rather than rejecting the entry."
+echo "Commit the change and re-run leaderboard verification afterward.
+The sandbox image SHA is stored on each entry but not hashed; mismatch on
+re-verification fires the sandbox-drift flag."

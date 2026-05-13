@@ -1,7 +1,7 @@
 {
   "image": "python:3.11-bookworm-slim",
-  "sha256": "PENDING_M5_HARDENING",
-  "rationale": "Pinned to bookworm-slim (explicit OS) rather than the version-shifting 'slim' alias. M2 ships the tag; M5 reproducibility hardening promotes this to a SHA256 digest and enforces it at sandbox setup time.",
+  "sha256": "pending",
+  "rationale": "Pinned to the bookworm-slim tag rather than the version-shifting 'slim' alias. The SHA256 will be promoted to a real digest once scripts/pin_image_sha.sh is run against a daemon and the digest is committed here.",
   "baked_packages": {
     "pytest": "8.3.4",
     "ruff": "0.7.4",

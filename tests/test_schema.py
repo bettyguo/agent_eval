@@ -58,7 +58,7 @@ class TestTaskMeta:
 
 
 class TestGraderLLMBan:
-    """ADR-0006: grader scripts may not import LLM SDKs."""
+    """Grader scripts may not import LLM SDKs (no LLM-as-judge in v1)."""
 
     @pytest.mark.parametrize(
         "forbidden",

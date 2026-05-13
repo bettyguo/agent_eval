@@ -1,8 +1,8 @@
 """SkillBundle: load .claude/skills/ directories or a single CLAUDE.md.
 
-Implements DESIGN.md §1.2 SkillBundle. M1 implements `empty()` and a minimal
-`from_dir()` that parses SKILL.md frontmatter; full skill execution-time
-injection happens in M2.
+Three constructors: `empty()` for the no-skills baseline (stable hash),
+`from_dir()` for a `.claude/skills/` tree, and `from_claude_md()` for the
+legacy single-file format.
 """
 
 from __future__ import annotations

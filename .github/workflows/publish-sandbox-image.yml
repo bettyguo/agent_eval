@@ -1,14 +1,10 @@
 name: Publish sandbox image
 
-# Builds + publishes the agenteval-sandbox base image to GHCR on changes to
-# sandbox/Dockerfile.base or sandbox/image.lock. Tags with both the git SHA
-# and `:base` (rolling latest).
-#
-# Per ADR-0017, sandbox_image_sha is stored on each leaderboard entry but
-# NOT part of entry_hash; mismatch on re-verification fires the
-# `sandbox-drift` flag rather than rejecting the entry. This workflow does
-# NOT auto-update sandbox/image.lock — maintainers run scripts/pin_image_sha.sh
-# locally and commit the digest with their bump.
+# Builds + publishes the sandbox base image to GHCR on changes to
+# sandbox/Dockerfile.base or sandbox/image.lock. Tagged with both the git
+# SHA (immutable) and `:base` (rolling). The workflow does not auto-update
+# sandbox/image.lock; run scripts/pin_image_sha.sh locally and commit the
+# digest with the bump.
 
 on:
   push:
